@@ -910,21 +910,178 @@ async function savePersonToSharedRoster(member){
 }
 
 // ═══════════════════════════════════════════════════════════
-//  IMAGE GENERATION PROXY
+//  CANVAS IMAGE GENERATION — free, no API, runs in browser
 // ═══════════════════════════════════════════════════════════
-const PROXY_URL='https://gtt-proxy-1i9y.onrender.com';
-async function generateImage(answer,question){
-  try{
-    const r=await fetch(`${PROXY_URL}/generate-image`,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({answer,question})
+
+// Keyword → emoji + colour theme mappings
+const IMG_THEMES = [
+  { rx:/\b(dog|puppy|labrador|retriever|spaniel|beagle|hound)\b/,        emoji:'🐕', bg:'#8B6914', acc:'#F5DEB3' },
+  { rx:/\b(cat|kitten|feline|tabby|persian|siamese)\b/,                  emoji:'🐈', bg:'#9B59B6', acc:'#F8C8FF' },
+  { rx:/\b(lion|tiger|leopard|cheetah|panther|jaguar)\b/,                emoji:'🦁', bg:'#E67E22', acc:'#FFF3CD' },
+  { rx:/\b(elephant|rhino|hippo|giraffe|zebra|gorilla|chimp)\b/,         emoji:'🐘', bg:'#7F8C8D', acc:'#ECF0F1' },
+  { rx:/\b(giraffe)\b/,                                                   emoji:'🦒', bg:'#F39C12', acc:'#FFF9C4' },
+  { rx:/\b(penguin|eagle|owl|parrot|flamingo|toucan|peacock|bird)\b/,    emoji:'🦅', bg:'#2C3E50', acc:'#85C1E9' },
+  { rx:/\b(shark|whale|dolphin|octopus|fish|seal|walrus)\b/,             emoji:'🦈', bg:'#1A5276', acc:'#AED6F1' },
+  { rx:/\b(dragon|dinosaur|t-rex|velociraptor)\b/,                       emoji:'🐉', bg:'#1E8449', acc:'#ABEBC6' },
+  { rx:/\b(horse|unicorn|pony|stallion|mare)\b/,                         emoji:'🐴', bg:'#784212', acc:'#F0D9B5' },
+  { rx:/\b(bear|panda|koala|polar bear)\b/,                              emoji:'🐻', bg:'#5D4037', acc:'#D7CCC8' },
+  { rx:/\b(monkey|ape|gorilla|chimpanzee|orangutan)\b/,                  emoji:'🐒', bg:'#6D4C41', acc:'#FFCC80' },
+  { rx:/\b(fox|wolf|coyote|hyena)\b/,                                    emoji:'🦊', bg:'#E55722', acc:'#FFDAB9' },
+  { rx:/\b(rabbit|bunny|hare)\b/,                                        emoji:'🐰', bg:'#F48FB1', acc:'#FFF' },
+  { rx:/\b(pizza|pasta|italian|spaghetti|lasagne)\b/,                    emoji:'🍕', bg:'#C0392B', acc:'#FDEBD0' },
+  { rx:/\b(sushi|japanese|ramen|noodle|miso)\b/,                         emoji:'🍱', bg:'#E74C3C', acc:'#FAFAFA' },
+  { rx:/\b(burger|bbq|steak|beef|grill|american)\b/,                     emoji:'🍔', bg:'#D35400', acc:'#FDEBD0' },
+  { rx:/\b(curry|indian|spice|tikka|masala)\b/,                          emoji:'🍛', bg:'#F39C12', acc:'#FFF3CD' },
+  { rx:/\b(taco|mexican|burrito|guacamole|salsa)\b/,                     emoji:'🌮', bg:'#27AE60', acc:'#FDFEFE' },
+  { rx:/\b(chocolate|cake|dessert|ice cream|cookie|donut|pastry|sweet)\b/,emoji:'🍰', bg:'#A569BD', acc:'#FADBD8' },
+  { rx:/\b(coffee|espresso|latte|cappuccino|barista|cafe)\b/,            emoji:'☕', bg:'#4E342E', acc:'#D7CCC8' },
+  { rx:/\b(wine|champagne|prosecco|sommelier|vineyard)\b/,               emoji:'🍷', bg:'#7B241C', acc:'#FADBD8' },
+  { rx:/\b(beer|pub|brewery|ale|craft beer|lager)\b/,                    emoji:'🍺', bg:'#F39C12', acc:'#FFF9C4' },
+  { rx:/\b(cocktail|gin|whisky|whiskey|rum|vodka|martini|bar)\b/,        emoji:'🍸', bg:'#1ABC9C', acc:'#D1F2EB' },
+  { rx:/\b(beach|surf|ocean|sea|waves|coast|tropical|island)\b/,         emoji:'🏖️', bg:'#2980B9', acc:'#D6EAF8' },
+  { rx:/\b(mountain|hiking|trekking|climbing|summit|alps|snowboard)\b/,  emoji:'🏔️', bg:'#2C3E50', acc:'#BDC3C7' },
+  { rx:/\b(paris|eiffel|france|french)\b/,                               emoji:'🗼', bg:'#2471A3', acc:'#D6EAF8' },
+  { rx:/\b(new york|manhattan|statue of liberty|nyc)\b/,                 emoji:'🗽', bg:'#1ABC9C', acc:'#D1F2EB' },
+  { rx:/\b(japan|tokyo|kyoto|osaka|sakura)\b/,                           emoji:'⛩️', bg:'#E74C3C', acc:'#FDFEFE' },
+  { rx:/\b(safari|kenya|africa|savannah|savanna)\b/,                     emoji:'🦁', bg:'#E67E22', acc:'#FDEBD0' },
+  { rx:/\b(space|astronaut|moon|mars|planet|nasa|rocket|galaxy|cosmos)\b/,emoji:'🚀', bg:'#1A1A2E', acc:'#A9CCE3' },
+  { rx:/\b(football|soccer|premier league|fifa|goal)\b/,                 emoji:'⚽', bg:'#27AE60', acc:'#D5F5E3' },
+  { rx:/\b(tennis|wimbledon|racket)\b/,                                  emoji:'🎾', bg:'#F39C12', acc:'#FEF9E7' },
+  { rx:/\b(cricket|batting|bowling|wicket)\b/,                           emoji:'🏏', bg:'#5D6D7E', acc:'#EBF5FB' },
+  { rx:/\b(rugby|scrum|try|haka)\b/,                                     emoji:'🏉', bg:'#784212', acc:'#FDEBD0' },
+  { rx:/\b(golf|hole in one|putting|fairway)\b/,                         emoji:'⛳', bg:'#1E8449', acc:'#D5F5E3' },
+  { rx:/\b(swim|swimming|pool|triathlon|diving)\b/,                      emoji:'🏊', bg:'#2980B9', acc:'#D6EAF8' },
+  { rx:/\b(cycling|bicycle|bike|tour de france)\b/,                      emoji:'🚴', bg:'#E74C3C', acc:'#FDEBD0' },
+  { rx:/\b(run|running|marathon|sprint|jogging)\b/,                      emoji:'🏃', bg:'#E67E22', acc:'#FDEBD0' },
+  { rx:/\b(gym|weightlift|bodybuilding|crossfit|fitness)\b/,             emoji:'🏋️', bg:'#2C3E50', acc:'#BDC3C7' },
+  { rx:/\b(chess|strategy|board game|checkers)\b/,                       emoji:'♟️', bg:'#212F3D', acc:'#BDC3C7' },
+  { rx:/\b(video game|gaming|playstation|xbox|nintendo|zelda|mario)\b/,  emoji:'🎮', bg:'#1A1A2E', acc:'#A9CCE3' },
+  { rx:/\b(music|concert|festival|gig|band|singer|performer)\b/,         emoji:'🎵', bg:'#8E44AD', acc:'#D7BDE2' },
+  { rx:/\b(guitar|electric guitar|bass|acoustic)\b/,                     emoji:'🎸', bg:'#C0392B', acc:'#FADBD8' },
+  { rx:/\b(piano|keyboard|classical|orchestra|symphony)\b/,              emoji:'🎹', bg:'#212F3D', acc:'#BDC3C7' },
+  { rx:/\b(drum|percussion|beats|rhythm)\b/,                             emoji:'🥁', bg:'#E74C3C', acc:'#FADBD8' },
+  { rx:/\b(film|movie|cinema|director|actor|oscar|hollywood|netflix)\b/, emoji:'🎬', bg:'#1A1A2E', acc:'#BDC3C7' },
+  { rx:/\b(book|novel|read|author|library|fiction|literature)\b/,        emoji:'📚', bg:'#8B4513', acc:'#FDEBD0' },
+  { rx:/\b(art|paint|gallery|museum|sculpture|artist|canvas)\b/,         emoji:'🎨', bg:'#8E44AD', acc:'#D7BDE2' },
+  { rx:/\b(doctor|surgeon|medicine|hospital|nurse|medical|GP)\b/,        emoji:'👨‍⚕️', bg:'#1ABC9C', acc:'#D1F2EB' },
+  { rx:/\b(teacher|professor|school|university|lecture|education)\b/,    emoji:'🎓', bg:'#2471A3', acc:'#D6EAF8' },
+  { rx:/\b(chef|cook|kitchen|restaurant|michelin|bake|bakery)\b/,        emoji:'👨‍🍳', bg:'#E67E22', acc:'#FDEBD0' },
+  { rx:/\b(pilot|airline|aviation|cockpit|fly|flight)\b/,                emoji:'✈️', bg:'#2C3E50', acc:'#85C1E9' },
+  { rx:/\b(farmer|agriculture|field|tractor|harvest|rural)\b/,           emoji:'👨‍🌾', bg:'#27AE60', acc:'#D5F5E3' },
+  { rx:/\b(firefighter|fire|rescue|emergency)\b/,                        emoji:'🚒', bg:'#E74C3C', acc:'#FADBD8' },
+  { rx:/\b(police|detective|spy|secret agent|james bond)\b/,             emoji:'🕵️', bg:'#212F3D', acc:'#BDC3C7' },
+  { rx:/\b(architect|design|build|construct|engineer)\b/,                emoji:'🏗️', bg:'#5D6D7E', acc:'#EBF5FB' },
+  { rx:/\b(superhero|batman|superman|spiderman|avengers|marvel|dc)\b/,   emoji:'🦸', bg:'#2471A3', acc:'#D6EAF8' },
+  { rx:/\b(wizard|magic|hogwarts|harry potter|fantasy|spell)\b/,         emoji:'🧙', bg:'#6C3483', acc:'#D7BDE2' },
+  { rx:/\b(pirate|treasure|ship|sail|ocean|caribbean)\b/,                emoji:'🏴‍☠️', bg:'#212F3D', acc:'#BDC3C7' },
+  { rx:/\b(garden|plant|flower|nature|botanic|greenhouse)\b/,            emoji:'🌺', bg:'#27AE60', acc:'#D5F5E3' },
+  { rx:/\b(yoga|meditation|mindfulness|zen|pilates)\b/,                  emoji:'🧘', bg:'#1ABC9C', acc:'#D1F2EB' },
+  { rx:/\b(fashion|designer|model|runway|vogue|style|clothes)\b/,        emoji:'👗', bg:'#E91E63', acc:'#FCE4EC' },
+  { rx:/\b(tech|software|engineer|developer|code|programmer|startup)\b/, emoji:'💻', bg:'#1A1A2E', acc:'#A9CCE3' },
+  { rx:/\b(finance|banker|hedge fund|trading|stocks|wall street)\b/,     emoji:'📈', bg:'#1E8449', acc:'#D5F5E3' },
+  { rx:/\b(comedian|stand-up|funny|humour|laugh|comedy club)\b/,         emoji:'🎤', bg:'#F39C12', acc:'#FEF9E7' },
+  { rx:/\b(podcast|host|broadcast|radio|journalist|reporter)\b/,         emoji:'🎙️', bg:'#5D6D7E', acc:'#EBF5FB' },
+  { rx:/\b(photographer|photo|camera|shoot|portrait|landscape)\b/,       emoji:'📷', bg:'#212F3D', acc:'#BDC3C7' },
+  { rx:/\b(travel|backpack|explore|adventure|nomad|world)\b/,            emoji:'🌍', bg:'#2980B9', acc:'#D6EAF8' },
+  { rx:/\b(ski|skiing|snowboard|alps|winter sport|piste)\b/,             emoji:'⛷️', bg:'#2C3E50', acc:'#D6EAF8' },
+  { rx:/\b(dance|dancing|ballet|salsa|tango|hip.?hop|choreograph)\b/,    emoji:'💃', bg:'#E91E63', acc:'#FCE4EC' },
+  { rx:/\b(sing|singing|vocalist|opera|choir|karaoke)\b/,                emoji:'🎤', bg:'#8E44AD', acc:'#D7BDE2' },
+  { rx:/\b(write|writing|author|novel|poet|screenplay|journalist)\b/,    emoji:'✍️', bg:'#5D6D7E', acc:'#EBF5FB' },
+  { rx:/\b(car|racing|formula one|f1|ferrari|lamborghini|driver)\b/,     emoji:'🏎️', bg:'#E74C3C', acc:'#FADBD8' },
+  { rx:/\b(home|house|property|estate agent|interior design)\b/,         emoji:'🏠', bg:'#E67E22', acc:'#FDEBD0' },
+];
+
+function getTheme(text) {
+  const lo = text.toLowerCase();
+  for (const t of IMG_THEMES) {
+    if (t.rx.test(lo)) return t;
+  }
+  // Fallback: generate colour from text hash
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  const hue = Math.abs(hash) % 360;
+  return {
+    emoji: text[0]?.toUpperCase() || '?',
+    bg: `hsl(${hue},60%,35%)`,
+    acc: `hsl(${hue},60%,90%)`,
+  };
+}
+
+function generateCanvasImage(answer) {
+  return new Promise(resolve => {
+    const size = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const theme = getTheme(answer);
+
+    // Background gradient
+    const grad = ctx.createLinearGradient(0, 0, size, size);
+    grad.addColorStop(0, theme.bg);
+    grad.addColorStop(1, shadeColor(theme.bg, -20));
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, size, size);
+
+    // Subtle circle pattern
+    ctx.globalAlpha = 0.08;
+    ctx.fillStyle = theme.acc;
+    for (let i = 0; i < 8; i++) {
+      const x = (Math.sin(i * 137.5) * 0.5 + 0.5) * size;
+      const y = (Math.cos(i * 97.3) * 0.5 + 0.5) * size;
+      const r = 40 + (i % 3) * 30;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Main emoji — large and centred
+    const isTextEmoji = theme.emoji.length <= 2 && !/\p{Extended_Pictographic}/u.test(theme.emoji);
+    ctx.font = `${size * 0.45}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(theme.emoji, size / 2, size / 2 - 20);
+
+    // Answer text at bottom
+    ctx.fillStyle = theme.acc;
+    ctx.globalAlpha = 0.9;
+    const words = answer.split(' ');
+    const maxW = size - 40;
+    ctx.font = `bold ${size * 0.072}px Arial`;
+    let lines = [], line = '';
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+    // max 2 lines
+    lines = lines.slice(0, 2);
+    const lineH = size * 0.082;
+    const startY = size - 30 - (lines.length - 1) * lineH;
+    lines.forEach((l, i) => {
+      ctx.globalAlpha = 0.25;
+      ctx.fillStyle = '#000';
+      ctx.fillText(l, size / 2 + 1, startY + i * lineH + 1);
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = theme.acc;
+      ctx.fillText(l, size / 2, startY + i * lineH);
     });
-    if(!r.ok){console.warn('Image proxy returned',r.status);return null;}
-    const d=await r.json();
-    if(d.error){console.warn('Proxy error:',d.error);return null;}
-    return d.url?{type:'image',url:d.url}:null;
-  }catch(e){console.warn('Image generation failed:',e);return null;}
+    ctx.globalAlpha = 1;
+
+    resolve({ type: 'image', url: canvas.toDataURL('image/png') });
+  });
+}
+
+function shadeColor(col, pct) {
+  // Darken/lighten a colour string by pct%
+  if (col.startsWith('hsl')) {
+    const m = col.match(/hsl\((\d+),(\d+)%,(\d+)%\)/);
+    if (m) return `hsl(${m[1]},${m[2]}%,${Math.max(0,Math.min(100,parseInt(m[3])+pct))}%)`;
+  }
+  return col;
+}
+
+async function generateImage(answer) {
+  return generateCanvasImage(answer);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1327,9 +1484,14 @@ async function submitAnswer(){
   showLoading('Saving your answer…');
   try{
     const emoji=localEmojiArt(ans);
-    let cover=await generateImage(ans,question);
-    if(!cover)cover=await fetchCover(ans);
-    const sub={answer:ans,emojiArt:emoji,cover};
+    // Generate canvas image first (free, instant); also try cover art for albums/films
+    const [cover, coverArt] = await Promise.all([
+      generateCanvasImage(ans),
+      fetchCover(ans),
+    ]);
+    // Prefer real cover art (album/film) if found, otherwise use canvas
+    const finalCover = (coverArt && coverArt.type==='image') ? coverArt : cover;
+    const sub={answer:ans,emojiArt:emoji,cover:finalCover};
     submissions[selectedPlayer.id]=sub;
     await saveSubmission(selectedPlayer.id,sub);
     // Auto-return to lobby after a short confirmation moment
