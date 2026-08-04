@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guess That Thing</title>
+<style>
+/* ── BAIN DESIGN SYSTEM TOKENS (verbatim) ─────────────────────────────────── */
+:root {
+  --ds-space-01: 2px;
+  --ds-space-02: 4px;
+  --ds-space-03: 8px;
+  --ds-space-04: 16px;
+  --ds-space-05: 24px;
+  --ds-space-06: 32px;
+  --ds-space-07: 40px;
+  --ds-space-08: 48px;
+  --ds-space-09: 64px;
+  --ds-space-10: 80px;
+  --ds-space-11: 96px;
+  --ds-space-12: 160px;
+  --ds-font-sans: Arial, Helvetica, sans-serif;
+  --ds-color-company-red:       #CC0000;
+  --ds-color-company-red-hover: #9D1B22;
+  --ds-color-black:             #121212;
+  --ds-color-white:             #FFFFFF;
+  --ds-text-black:    #000000;
+  --ds-text-dark:     #333333;
+  --ds-text-regular:  #717171;
+  --ds-text-body:     #616568;
+  --ds-text-helper:   #767676;
+  --ds-text-on-color: #FFFFFF;
+  --ds-gray-x-light:  #F9F9F9;
+  --ds-gray-light:    #ECECEC;
+  --ds-gray-medium:   #CCCCCC;
+  --ds-gray-dark:     #A3A3A3;
+  --ds-stroke:        #D8D8D8;
+  --ds-success:       #07C29F;
+  --ds-success-light: #DAF2ED;
+  --ds-warning:       #F1C21B;
+  --ds-warning-light: #FEF7E8;
+  --ds-error:         #CC0000;
+  --ds-error-light:   #F2DFD8;
+  --ds-background:        var(--ds-color-white);
+  --ds-background-hover:  rgba(0,0,0,0.04);
+  --ds-layer-tinted:      var(--ds-gray-x-light);
+  --ds-shadow-card:       0 14px 42px 0 rgba(8,15,52,0.06);
+  --ds-nav-height: 0;
+  --ds-red-100: #FF6666;
+  --ds-red-200: #CC0000;
+  --ds-red-300: #990000;
+  --ds-red-400: #660000;
+  --ds-chart-gray-100: #D2D2D1;
+  --ds-chart-gray-200: #A5A5A4;
+  --ds-surface:          var(--ds-color-white);
+  --ds-surface-text:     var(--ds-text-dark);
+  --ds-surface-heading:  var(--ds-text-black);
+  --ds-surface-divider:  var(--ds-stroke);
+  --ds-surface-eyebrow:  var(--ds-color-company-red);
+}
+html, body {
+  font-family: var(--ds-font-sans);
+  color: var(--ds-surface-text);
+  background: var(--ds-surface);
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+/* ── RESET ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+h1,h2,h3,h4,p { margin: 0; }
+button { font-family: var(--ds-font-sans); cursor: pointer; }
+input, textarea { font-family: var(--ds-font-sans); }
+a { color: var(--ds-color-company-red); text-underline-offset: 2px; }
+a:hover { color: var(--ds-color-company-red-hover); }
+
+/* ── SCREENS ─────────────────────────────────────────────────────────────── */
+.screen { display: none; min-height: 100vh; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ── LAYOUT ──────────────────────────────────────────────────────────────── */
+.page-wrap    { max-width: 880px; margin: 0 auto; padding: var(--ds-space-06) var(--ds-space-05); width: 100%; }
+.page-wrap-sm { max-width: 560px; margin: 0 auto; padding: var(--ds-space-06) var(--ds-space-05); width: 100%; }
+.page-wrap-md { max-width: 680px; margin: 0 auto; padding: var(--ds-space-06) var(--ds-space-05); width: 100%; }
+.page-centre  { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--ds-space-07) var(--ds-space-05); text-align: center; }
+.flex         { display: flex; }
+.flex-col     { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-2  { gap: var(--ds-space-02); }
+.gap-3  { gap: var(--ds-space-03); }
+.gap-4  { gap: var(--ds-space-04); }
+.gap-5  { gap: var(--ds-space-05); }
+.gap-6  { gap: var(--ds-space-06); }
+.mt-3   { margin-top: var(--ds-space-03); }
+.mt-4   { margin-top: var(--ds-space-04); }
+.mt-5   { margin-top: var(--ds-space-05); }
+.mt-6   { margin-top: var(--ds-space-06); }
+.mt-7   { margin-top: var(--ds-space-07); }
+.mb-4   { margin-bottom: var(--ds-space-04); }
+.mb-5   { margin-bottom: var(--ds-space-05); }
+
+/* ── TOP BAR (nav) ───────────────────────────────────────────────────────── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--ds-space-04) var(--ds-space-05);
+  border-bottom: 1px solid var(--ds-stroke);
+  background: var(--ds-color-white);
+  flex-shrink: 0;
+}
+.topbar-logo {
+  font-size: 16px; font-weight: 700; color: var(--ds-text-black);
+  letter-spacing: 0; text-transform: uppercase;
+}
+.topbar-logo span { color: var(--ds-color-company-red); }
+
+/* Red accent bar under topbar */
+.red-bar { height: 4px; background: var(--ds-color-company-red); flex-shrink: 0; }
+
+/* ── EYEBROW ─────────────────────────────────────────────────────────────── */
+.eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--ds-surface-eyebrow);
+  margin-bottom: var(--ds-space-02);
+}
+
+/* ── TYPOGRAPHY ──────────────────────────────────────────────────────────── */
+.h1 { font-size: 40px; font-weight: 700; line-height: 48px; color: var(--ds-text-black); }
+.h2 { font-size: 28px; font-weight: 700; line-height: 36px; color: var(--ds-text-black); }
+.h3 { font-size: 21px; font-weight: 700; line-height: 28px; color: var(--ds-text-black); }
+.h4 { font-size: 16px; font-weight: 700; line-height: 24px; color: var(--ds-text-dark); }
+.body-lg { font-size: 18px; line-height: 28px; color: var(--ds-text-dark); }
+.body    { font-size: 16px; line-height: 24px; color: var(--ds-text-dark); }
+.body-sm { font-size: 14px; line-height: 20px; color: var(--ds-text-regular); }
+.caption { font-size: 12px; line-height: 18px; color: var(--ds-text-regular); }
+.text-red   { color: var(--ds-color-company-red); }
+.text-muted { color: var(--ds-text-regular); }
+.text-center { text-align: center; }
+.block { display: block; }
+
+/* ── BUTTONS ─────────────────────────────────────────────────────────────── */
+.ds-btn {
+  font-family: var(--ds-font-sans);
+  font-size: 14px; font-weight: 700; line-height: 16px;
+  text-transform: uppercase; letter-spacing: 0;
+  padding: var(--ds-space-05) var(--ds-space-06);
+  border: 1px solid transparent; border-radius: 0;
+  cursor: pointer; transition: background 120ms, color 120ms, border-color 120ms;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--ds-space-03);
+  min-height: 56px; text-decoration: none;
+}
+.ds-btn--red   { background: var(--ds-color-company-red); color: var(--ds-text-on-color); }
+.ds-btn--red:hover { background: var(--ds-color-company-red-hover); }
+.ds-btn--white { background: var(--ds-color-white); color: var(--ds-color-company-red); border-color: var(--ds-stroke); }
+.ds-btn--white:hover { background: var(--ds-color-company-red-hover); color: var(--ds-text-on-color); border-color: var(--ds-color-company-red-hover); }
+.ds-btn--ghost { background: transparent; color: var(--ds-text-regular); border-color: var(--ds-stroke); }
+.ds-btn--ghost:hover { border-color: var(--ds-text-dark); color: var(--ds-text-dark); }
+.ds-btn--block { width: 100%; }
+.ds-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.ds-btn:disabled:hover { background: var(--ds-color-company-red); }
+.ds-btn--white:disabled:hover { background: var(--ds-color-white); color: var(--ds-color-company-red); }
+.ds-btn--ghost:disabled:hover { background: transparent; color: var(--ds-text-regular); border-color: var(--ds-stroke); }
+.ds-btn:focus-visible { outline: 2px solid var(--ds-color-company-red); outline-offset: 2px; }
+
+/* Pill button (for secondary/inline actions) */
+.ds-btn--pill {
+  font-size: 14px; font-weight: 700; line-height: 20px;
+  text-transform: none; padding: var(--ds-space-02) var(--ds-space-04);
+  border-radius: 45px; border: 1px solid var(--ds-stroke);
+  background: var(--ds-color-white); color: var(--ds-text-dark);
+  min-height: 32px; cursor: pointer; transition: all 120ms;
+  display: inline-flex; align-items: center; gap: var(--ds-space-02);
+}
+.ds-btn--pill:hover { border-color: var(--ds-color-company-red); color: var(--ds-color-company-red); }
+
+/* ── INPUTS ──────────────────────────────────────────────────────────────── */
+.ds-label { display: block; font-weight: 700; font-size: 14px; line-height: 20px; color: var(--ds-text-dark); margin-bottom: var(--ds-space-02); }
+.ds-input {
+  font-family: var(--ds-font-sans); font-size: 16px; line-height: 24px;
+  padding: 12px var(--ds-space-03);
+  background: var(--ds-gray-x-light); color: var(--ds-text-dark);
+  border: 1px solid var(--ds-color-black); border-radius: 0;
+  width: 100%; height: 48px; box-sizing: border-box;
+}
+.ds-input::placeholder { color: var(--ds-text-regular); }
+.ds-input:focus { background: var(--ds-color-white); box-shadow: 0 0 0 3px var(--ds-text-regular); outline: 2px solid transparent; }
+textarea.ds-input { height: auto; min-height: 80px; resize: vertical; }
+
+/* ── CARDS ───────────────────────────────────────────────────────────────── */
+.ds-card {
+  background: var(--ds-color-white); border: 1px solid var(--ds-stroke);
+  padding: var(--ds-space-05); box-shadow: var(--ds-shadow-card);
+}
+.ds-card--quiet { background: var(--ds-gray-x-light); border: 1px solid var(--ds-stroke); padding: var(--ds-space-05); box-shadow: none; }
+
+/* ── DIVIDER ─────────────────────────────────────────────────────────────── */
+.ds-divider { border: none; border-top: 1px solid var(--ds-stroke); margin: var(--ds-space-05) 0; }
+
+/* ── PROGRESS (submission bar) ───────────────────────────────────────────── */
+.ds-progress { width: 100%; height: 4px; background: var(--ds-stroke); }
+.ds-progress__fill { height: 100%; background: var(--ds-color-company-red); transition: width 300ms ease-out; }
+
+/* ── NOTIFICATION ────────────────────────────────────────────────────────── */
+.ds-notification { display: flex; gap: var(--ds-space-03); padding: var(--ds-space-04); border-left: 3px solid; font-size: 14px; line-height: 20px; color: var(--ds-text-dark); }
+.ds-notification--success { background: var(--ds-success-light); border-color: var(--ds-success); }
+.ds-notification--error   { background: var(--ds-error-light);   border-color: var(--ds-error); }
+
+/* ── BADGE / STATUS TAG ──────────────────────────────────────────────────── */
+.badge {
+  display: inline-block; padding: 2px 10px;
+  font-size: 12px; font-weight: 700; line-height: 18px;
+  background: var(--ds-gray-x-light); color: var(--ds-text-regular);
+  border: 1px solid var(--ds-stroke);
+}
+.badge--red   { background: var(--ds-error-light); color: var(--ds-color-company-red); border-color: var(--ds-color-company-red); }
+.badge--green { background: var(--ds-success-light); color: var(--ds-success); border-color: var(--ds-success); }
+
+/* ── TOAST ───────────────────────────────────────────────────────────────── */
+#toast {
+  position: fixed; bottom: var(--ds-space-06); left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--ds-text-dark); color: var(--ds-text-on-color);
+  padding: var(--ds-space-03) var(--ds-space-05);
+  font-size: 14px; font-weight: 700;
+  z-index: 9999; white-space: nowrap;
+  border-left: 4px solid var(--ds-color-company-red);
+  box-shadow: var(--ds-shadow-card);
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+#toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── LOADING OVERLAY ─────────────────────────────────────────────────────── */
+#loading {
+  display: none; position: fixed; inset: 0;
+  background: rgba(255,255,255,0.92);
+  z-index: 1000; align-items: center; justify-content: center; flex-direction: column; gap: var(--ds-space-04);
+}
+#loading.show { display: flex; }
+.spinner { width: 40px; height: 40px; border: 3px solid var(--ds-stroke); border-top-color: var(--ds-color-company-red); border-radius: 50%; animation: spin 0.8s linear infinite; }
+#loading-text { font-size: 14px; font-weight: 700; color: var(--ds-text-regular); text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* ── OVERLAYS ────────────────────────────────────────────────────────────── */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(18,18,18,0.5); z-index: 2000; align-items: center; justify-content: center; padding: var(--ds-space-05); }
+.overlay.show { display: flex; }
+.modal { background: var(--ds-color-white); border-top: 4px solid var(--ds-color-company-red); padding: var(--ds-space-06); max-width: 440px; width: 100%; box-shadow: var(--ds-shadow-card); }
+
+/* ── AVATAR ──────────────────────────────────────────────────────────────── */
+.avatar { border-radius: 50%; object-fit: cover; flex-shrink: 0; display: block; }
+.avatar-init { border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; color: var(--ds-text-on-color); }
+
+/* ── PLAYER GRID (setup) ─────────────────────────────────────────────────── */
+.player-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--ds-space-03); }
+.player-tile {
+  display: flex; flex-direction: column; align-items: center; gap: var(--ds-space-03);
+  padding: var(--ds-space-04) var(--ds-space-03);
+  background: var(--ds-gray-x-light); border: 2px solid var(--ds-stroke);
+  cursor: pointer; transition: all 120ms; position: relative;
+  font-size: 14px; font-weight: 700; color: var(--ds-text-dark);
+}
+.player-tile:hover { border-color: var(--ds-color-company-red); }
+.player-tile.sel  { background: var(--ds-error-light); border-color: var(--ds-color-company-red); color: var(--ds-color-company-red); }
+.player-tile .tick { position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; background: var(--ds-color-company-red); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.player-tile .tick svg { width: 10px; height: 10px; fill: var(--ds-text-on-color); }
+
+/* ── SUBMISSION STATUS ROW ───────────────────────────────────────────────── */
+.sub-row { display: flex; align-items: center; gap: var(--ds-space-03); padding: var(--ds-space-02) 0; border-bottom: 1px solid var(--ds-stroke); }
+.sub-row:last-child { border-bottom: none; }
+
+/* ── ROOM CODE ───────────────────────────────────────────────────────────── */
+.room-code-display {
+  font-size: 36px; font-weight: 700; letter-spacing: 0.18em;
+  color: var(--ds-text-black); text-align: center;
+  padding: var(--ds-space-05) var(--ds-space-06);
+  background: var(--ds-gray-x-light); border: 1px solid var(--ds-stroke);
+  border-left: 4px solid var(--ds-color-company-red);
+  cursor: pointer; transition: background 120ms; user-select: all;
+}
+.room-code-display:hover { background: var(--ds-error-light); }
+
+/* ── QUESTION CARD ───────────────────────────────────────────────────────── */
+.question-text {
+  font-size: 22px; font-weight: 700; line-height: 32px;
+  color: var(--ds-text-black); padding: var(--ds-space-05);
+  border-left: 4px solid var(--ds-color-company-red);
+  background: var(--ds-gray-x-light);
+}
+
+/* ── FLIP CARD ───────────────────────────────────────────────────────────── */
+.flip-wrap { perspective: 1200px; cursor: pointer; flex: 1 1 280px; min-width: 260px; max-width: 400px; height: 200px; }
+.flip-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform 0.65s cubic-bezier(0.4,0.2,0.2,1); }
+.flip-wrap.flipped .flip-inner { transform: rotateY(180deg); }
+.flip-face { position: absolute; inset: 0; backface-visibility: hidden; overflow: hidden; }
+.flip-front { background: var(--ds-color-white); border: 1px solid var(--ds-stroke); border-top: 3px solid var(--ds-color-company-red); display: flex; box-shadow: var(--ds-shadow-card); }
+.flip-back  { background: var(--ds-gray-x-light); border: 1px solid var(--ds-color-company-red); border-top: 3px solid var(--ds-color-company-red); transform: rotateY(180deg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--ds-space-03); }
+.card-text-half { flex: 1; padding: var(--ds-space-04); display: flex; flex-direction: column; justify-content: space-between; min-width: 0; }
+.card-img-half  { width: 130px; flex-shrink: 0; }
+.card-img-half img, .card-img-half svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ── SVG ART ─────────────────────────────────────────────────────────────── */
+.svg-art-wrap { width: 100%; height: 100%; }
+
+/* ── Q OPTION LIST ───────────────────────────────────────────────────────── */
+.q-option {
+  display: block; width: 100%; text-align: left;
+  background: var(--ds-gray-x-light); border: 1px solid var(--ds-stroke); border-left: 3px solid transparent;
+  padding: var(--ds-space-04); font-family: var(--ds-font-sans);
+  font-size: 15px; line-height: 22px; color: var(--ds-text-dark);
+  cursor: pointer; transition: all 120ms;
+}
+.q-option:hover { border-left-color: var(--ds-color-company-red); background: var(--ds-error-light); color: var(--ds-color-company-red); }
+
+/* ── ROSTER ROW ──────────────────────────────────────────────────────────── */
+.roster-row { display: flex; align-items: center; gap: var(--ds-space-04); padding: var(--ds-space-04); border-bottom: 1px solid var(--ds-stroke); }
+.roster-row:last-child { border-bottom: none; }
+
+/* ── SETUP STEP ──────────────────────────────────────────────────────────── */
+.setup-step { display: flex; gap: var(--ds-space-04); align-items: flex-start; padding: var(--ds-space-04) 0; border-bottom: 1px solid var(--ds-stroke); }
+.setup-step:last-child { border-bottom: none; }
+.step-num { width: 28px; height: 28px; background: var(--ds-color-company-red); color: var(--ds-text-on-color); font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+
+/* ── CONFETTI ────────────────────────────────────────────────────────────── */
+.confetti-piece { position: fixed; pointer-events: none; z-index: 9000; animation: confettiFall linear forwards; }
+
+/* ── ANIMATIONS ──────────────────────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes confettiFall { 0% { transform: translateY(-20px) rotate(0); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── PRINT HIDE ──────────────────────────────────────────────────────────── */
+@media print { .ds-progress, #toast, #loading { display: none; } }
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- LOADING -->
+<div id="loading"><div class="spinner"></div><div id="loading-text">Loading…</div></div>
+
+<!-- CONFIRM MODAL -->
+<div id="confirm-overlay" class="overlay">
+  <div class="modal">
+    <p class="h4" style="margin-bottom:var(--ds-space-04);" id="confirm-msg"></p>
+    <div class="flex gap-3">
+      <button class="ds-btn ds-btn--ghost" onclick="confirmCancel()">Cancel</button>
+      <button class="ds-btn ds-btn--red" id="confirm-ok">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- MEMBER EDITOR MODAL -->
+<div id="member-overlay" class="overlay">
+  <div class="modal">
+    <p class="h4" id="member-title" style="margin-bottom:var(--ds-space-05);">Add team member</p>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:var(--ds-space-03);margin-bottom:var(--ds-space-05);">
+      <div style="position:relative;cursor:pointer;" onclick="document.getElementById('photo-file').click()">
+        <div id="modal-av" style="width:72px;height:72px;"></div>
+        <div style="position:absolute;bottom:0;right:0;width:22px;height:22px;background:var(--ds-color-company-red);display:flex;align-items:center;justify-content:center;">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="white"><path d="M8 4a2 2 0 0 0-2 2v.5H4.5A1.5 1.5 0 0 0 3 8v5a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 15 13V8a1.5 1.5 0 0 0-1.5-1.5H12V6a2 2 0 0 0-2-2H8zm0 1.5h2a.5.5 0 0 1 .5.5v.5H7.5V6a.5.5 0 0 1 .5-.5zM9 9.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+        </div>
+      </div>
+      <input type="file" id="photo-file" accept="image/*" style="display:none" onchange="onPhotoFile(event)">
+      <button id="photo-btn" onclick="document.getElementById('photo-file').click()" class="ds-btn--pill">Upload photo</button>
+      <button id="rm-photo-btn" onclick="removePhoto()" style="display:none;background:none;border:none;color:var(--ds-color-company-red);font-size:13px;cursor:pointer;font-family:var(--ds-font-sans);">Remove photo</button>
+    </div>
+    <div style="margin-bottom:var(--ds-space-04);">
+      <label class="ds-label" for="modal-name">Name</label>
+      <input type="text" class="ds-input" id="modal-name" placeholder="First name" maxlength="30" onkeydown="if(event.key==='Enter')saveMember()">
+    </div>
+    <div class="flex gap-3">
+      <button class="ds-btn ds-btn--ghost" onclick="closeMemberModal()" style="flex:1;">Cancel</button>
+      <button class="ds-btn ds-btn--red" onclick="saveMember()" style="flex:1;">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: FIREBASE SETUP
+══════════════════════════════════════════════════════════ -->
+<div id="screen-firebase" class="screen active">
+  <div class="topbar"><span class="topbar-logo">Guess That <span>Thing</span></span></div>
+  <div class="red-bar"></div>
+  <div class="page-centre">
+    <div style="max-width:520px;width:100%;">
+      <div class="eyebrow">One-time setup</div>
+      <h1 class="h2" style="margin-bottom:var(--ds-space-03);">Connect real-time sync</h1>
+      <p class="body" style="margin-bottom:var(--ds-space-06);">Firebase is free and takes 3 minutes to set up — it lets your whole team submit answers live across devices.</p>
+      <div class="ds-card" style="margin-bottom:var(--ds-space-05);">
+        <div class="setup-step">
+          <div class="step-num">1</div>
+          <div><span class="h4 block">Create a free Firebase project</span><span class="body-sm">Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> → Add project → any name → disable Analytics → Create</span></div>
+        </div>
+        <div class="setup-step">
+          <div class="step-num">2</div>
+          <div><span class="h4 block">Add a Realtime Database</span><span class="body-sm">Left menu → Build → Realtime Database → Create Database → choose a region → <em>Start in test mode</em></span></div>
+        </div>
+        <div class="setup-step" style="border-bottom:none;">
+          <div class="step-num">3</div>
+          <div style="width:100%;">
+            <span class="h4 block" style="margin-bottom:var(--ds-space-03);">Paste your database URL</span>
+            <span class="body-sm block" style="margin-bottom:var(--ds-space-03);">Looks like <code style="background:var(--ds-gray-x-light);padding:1px 4px;">https://your-project-default-rtdb.firebaseio.com</code></span>
+            <input type="text" class="ds-input" id="fb-url-input" placeholder="https://your-project-default-rtdb.firebaseio.com" onkeydown="if(event.key==='Enter')saveFirebaseUrl()">
+          </div>
+        </div>
+      </div>
+      <button class="ds-btn ds-btn--red ds-btn--block" onclick="saveFirebaseUrl()">Connect &amp; Start Playing</button>
+      <div style="text-align:center;margin-top:var(--ds-space-04);">
+        <button onclick="showScreen('screen-home')" style="background:none;border:none;color:var(--ds-text-regular);font-size:13px;cursor:pointer;font-family:var(--ds-font-sans);text-decoration:underline;">Skip setup — use pre-configured database</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: HOME
+══════════════════════════════════════════════════════════ -->
+<div id="screen-home" class="screen">
+  <div class="topbar"><span class="topbar-logo">Guess That <span>Thing</span></span></div>
+  <div class="red-bar"></div>
+  <div class="page-centre">
+    <div style="max-width:480px;width:100%;">
+      <div class="eyebrow">Case team fun</div>
+      <h1 class="h1" style="margin-bottom:var(--ds-space-04);">Guess That <span class="text-red">Thing</span></h1>
+      <p class="body-lg" style="margin-bottom:var(--ds-space-05);">Everyone answers the same question anonymously. Can your team match the answer to the person?</p>
+      <div id="home-roster-preview" style="display:flex;justify-content:center;min-height:48px;align-items:center;margin-bottom:var(--ds-space-05);"></div>
+      <div style="display:flex;flex-direction:column;gap:var(--ds-space-03);margin-bottom:var(--ds-space-06);">
+        <button class="ds-btn ds-btn--red ds-btn--block" onclick="goToCreate()">Host a New Game</button>
+        <button class="ds-btn ds-btn--white ds-btn--block" onclick="showScreen('screen-join')">Join a Game</button>
+        <button class="ds-btn ds-btn--ghost ds-btn--block" id="home-team-btn" onclick="showScreen('screen-team')">Set Up Your Team</button>
+      </div>
+      <div style="text-align:center;">
+        <button onclick="showScreen('screen-firebase')" style="background:none;border:none;color:var(--ds-text-regular);font-size:13px;cursor:pointer;font-family:var(--ds-font-sans);text-decoration:underline;" id="fb-status-btn">Firebase settings</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: TEAM
+══════════════════════════════════════════════════════════ -->
+<div id="screen-team" class="screen">
+  <div class="topbar">
+    <span class="topbar-logo">Guess That <span>Thing</span></span>
+    <button class="ds-btn--pill" onclick="showScreen('screen-home')">← Back</button>
+  </div>
+  <div class="red-bar"></div>
+  <div class="page-wrap-sm">
+    <div class="eyebrow mt-6">Your team</div>
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="h3">Team roster</h2>
+      <button class="ds-btn ds-btn--red" style="min-height:40px;font-size:13px;padding:var(--ds-space-03) var(--ds-space-05);" onclick="openMemberModal(null)">+ Add person</button>
+    </div>
+    <div class="ds-card" style="padding:0;">
+      <div id="roster-list"></div>
+      <div id="roster-empty" style="display:none;padding:var(--ds-space-07);text-align:center;">
+        <p class="body" style="margin-bottom:var(--ds-space-04);">No team members yet.</p>
+        <button class="ds-btn ds-btn--red" onclick="openMemberModal(null)">Add first person</button>
+      </div>
+    </div>
+    <div class="mt-6"><button class="ds-btn ds-btn--red ds-btn--block" onclick="showScreen('screen-home')">Done</button></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: CREATE
+══════════════════════════════════════════════════════════ -->
+<div id="screen-create" class="screen">
+  <div class="topbar">
+    <span class="topbar-logo">Guess That <span>Thing</span></span>
+    <button class="ds-btn--pill" onclick="showScreen('screen-home')">← Back</button>
+  </div>
+  <div class="red-bar"></div>
+  <div class="page-wrap-sm">
+    <div class="eyebrow mt-6">New game</div>
+    <h2 class="h3" style="margin-bottom:var(--ds-space-02);">Who's playing today?</h2>
+    <p class="body-sm" style="margin-bottom:var(--ds-space-05);">Select everyone who's in — tap to toggle.</p>
+    <div id="create-empty" style="display:none;" class="ds-card" style="text-align:center;padding:var(--ds-space-07);">
+      <p class="body" style="margin-bottom:var(--ds-space-04);">Add your team first.</p>
+      <button class="ds-btn ds-btn--red" onclick="showScreen('screen-team')">Set up team</button>
+    </div>
+    <div id="create-controls" style="display:none;">
+      <div class="flex gap-3 mb-4">
+        <button class="ds-btn--pill" onclick="selAll()">Select all</button>
+        <button class="ds-btn--pill" onclick="selNone()">Clear</button>
+        <button class="ds-btn--pill" onclick="showScreen('screen-team')">Edit team</button>
+      </div>
+      <div id="create-grid" class="player-grid" style="margin-bottom:var(--ds-space-05);"></div>
+      <button class="ds-btn ds-btn--red ds-btn--block" id="create-btn" onclick="proceedToQuestion()" disabled>Select at least 2 players</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: PICK QUESTION
+══════════════════════════════════════════════════════════ -->
+<div id="screen-pick-q" class="screen">
+  <div class="topbar">
+    <span class="topbar-logo">Guess That <span>Thing</span></span>
+    <button class="ds-btn--pill" onclick="showScreen('screen-create')">← Back</button>
+  </div>
+  <div class="red-bar"></div>
+  <div class="page-wrap-sm">
+    <div class="eyebrow mt-6">Pick a question</div>
+    <h2 class="h3" style="margin-bottom:var(--ds-space-02);">What are we guessing today?</h2>
+    <p class="body-sm" style="margin-bottom:var(--ds-space-05);">Choose from the list, or write your own below.</p>
+
+    <!-- Write your own -->
+    <div class="ds-card" style="margin-bottom:var(--ds-space-05);">
+      <label class="ds-label" for="custom-q-input">Write your own question</label>
+      <textarea class="ds-input" id="custom-q-input" rows="2" placeholder="Type a custom question…" style="margin-bottom:var(--ds-space-04);"></textarea>
+      <button class="ds-btn ds-btn--red" onclick="useCustomQuestion()">Use this question</button>
+    </div>
+
+    <!-- Question bank -->
+    <div class="flex items-center justify-between mb-4">
+      <span class="h4">Or pick from the list</span>
+      <button class="ds-btn--pill" onclick="shuffleQuestionList()">Shuffle</button>
+    </div>
+    <div id="q-option-list" style="display:flex;flex-direction:column;gap:var(--ds-space-02);"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: JOIN
+══════════════════════════════════════════════════════════ -->
+<div id="screen-join" class="screen">
+  <div class="topbar">
+    <span class="topbar-logo">Guess That <span>Thing</span></span>
+    <button class="ds-btn--pill" onclick="showScreen('screen-home')">← Back</button>
+  </div>
+  <div class="red-bar"></div>
+  <div class="page-centre">
+    <div style="max-width:400px;width:100%;">
+      <div class="eyebrow">Join a game</div>
+      <h2 class="h2" style="margin-bottom:var(--ds-space-05);">Enter the room code</h2>
+      <label class="ds-label" for="join-code">Room code</label>
+      <input type="text" class="ds-input" id="join-code" placeholder="e.g. GTT-4K2" maxlength="8"
+        style="text-align:center;font-size:28px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;height:64px;margin-bottom:var(--ds-space-04);"
+        oninput="this.value=this.value.toUpperCase()" onkeydown="if(event.key==='Enter')joinRoom()">
+      <button class="ds-btn ds-btn--red ds-btn--block" onclick="joinRoom()">Join game</button>
+      <p class="body-sm mt-4" style="text-align:center;">Ask your host for the room code.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: WAITING / LOBBY
+══════════════════════════════════════════════════════════ -->
+<div id="screen-waiting" class="screen">
+  <div class="topbar">
+    <span class="topbar-logo">Guess That <span>Thing</span></span>
+    <div id="waiting-top-right" class="flex items-center gap-3"></div>
+  </div>
+  <div class="red-bar"></div>
+  <div class="page-wrap-md">
+
+    <!-- Room code -->
+    <div style="margin-top:var(--ds-space-06);margin-bottom:var(--ds-space-05);">
+      <p class="body-sm text-center" style="margin-bottom:var(--ds-space-03);">Share this code — teammates open the app and tap "Join a Game"</p>
+      <div class="room-code-display" id="room-code-display" onclick="copyRoomCode()"></div>
+      <p class="caption text-center mt-3">Tap to copy</p>
+    </div>
+
+    <!-- Question -->
+    <div class="ds-card" style="margin-bottom:var(--ds-space-04);">
+      <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:var(--ds-space-03);">
+        <span class="eyebrow" style="margin-bottom:0;">Today's question</span>
+        <div class="flex gap-2">
+          <button class="ds-btn--pill" onclick="changeQuestion()">Change</button>
+          <button class="ds-btn--pill" onclick="startEditQ()">Edit</button>
+        </div>
+      </div>
+      <div id="q-display" class="question-text"></div>
+      <div id="q-edit" style="display:none;margin-top:var(--ds-space-04);">
+        <textarea class="ds-input" id="q-draft" rows="3" style="margin-bottom:var(--ds-space-03);"></textarea>
+        <div class="flex gap-3">
+          <button class="ds-btn ds-btn--red" style="min-height:40px;font-size:13px;padding:var(--ds-space-02) var(--ds-space-05);" onclick="saveQ()">Save</button>
+          <button class="ds-btn--pill" onclick="cancelEditQ()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submissions -->
+    <div class="ds-card" style="margin-bottom:var(--ds-space-04);">
+      <div class="flex items-center justify-between" style="margin-bottom:var(--ds-space-03);">
+        <span class="h4">Submissions</span>
+        <span class="badge" id="sub-chip">0 / 0</span>
+      </div>
+      <div class="ds-progress" style="margin-bottom:var(--ds-space-04);"><div class="ds-progress__fill" id="sub-bar" style="width:0%;"></div></div>
+      <div id="sub-names"></div>
+    </div>
+
+    <!-- Submit picker -->
+    <div class="ds-card" style="margin-bottom:var(--ds-space-04);">
+      <p class="h4" style="margin-bottom:var(--ds-space-02);">Submit your answer</p>
+      <p class="body-sm" style="margin-bottom:var(--ds-space-04);">Tap your name to answer privately.</p>
+      <div id="submit-picker" style="display:flex;flex-wrap:wrap;gap:var(--ds-space-03);"></div>
+    </div>
+
+    <button class="ds-btn ds-btn--red ds-btn--block" id="guess-btn" onclick="handleGuessClick()" disabled>Start guessing</button>
+    <p id="missing-note" class="body-sm text-center mt-3" style="display:none;"></p>
+    <div style="text-align:center;margin-top:var(--ds-space-04);">
+      <button class="ds-btn--pill" onclick="manualRefresh()" id="refresh-btn"><span id="refresh-icon">↻</span> Refresh submissions</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: SUBMIT
+══════════════════════════════════════════════════════════ -->
+<div id="screen-submit" class="screen">
+  <div class="topbar">
+    <span class="topbar-logo">Guess That <span>Thing</span></span>
+    <div style="display:flex;align-items:center;gap:var(--ds-space-03);">
+      <span class="body-sm" id="submit-player-name"></span>
+      <div id="submit-player-av"></div>
+    </div>
+  </div>
+  <div class="red-bar"></div>
+  <div class="page-wrap-sm">
+    <div class="eyebrow mt-6">Your turn</div>
+    <h2 class="h3" style="margin-bottom:var(--ds-space-05);">Answer secretly</h2>
+    <div id="submit-q" class="question-text" style="margin-bottom:var(--ds-space-05);"></div>
+    <div id="submit-form">
+      <label class="ds-label" for="answer-input">Your answer — press Enter to submit</label>
+      <input type="text" class="ds-input" id="answer-input" placeholder="Type and hit Enter…" maxlength="200"
+        style="margin-bottom:var(--ds-space-04);height:56px;font-size:18px;"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();submitAnswer();}">
+      <button class="ds-btn ds-btn--red ds-btn--block" onclick="submitAnswer()">Submit answer</button>
+      <div style="text-align:center;margin-top:var(--ds-space-04);">
+        <button class="ds-btn--pill" onclick="backToWaiting()">← Back to lobby</button>
+      </div>
+    </div>
+    <div id="submit-done" style="display:none;animation:slideUp 0.3s ease;">
+      <div class="ds-notification ds-notification--success" style="margin-bottom:var(--ds-space-05);">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="10" fill="#07C29F"/><path d="M6 10l3 3 5-5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Answer locked in!</span>
+      </div>
+      <div id="submit-done-av" style="display:flex;justify-content:center;margin-bottom:var(--ds-space-04);"></div>
+      <div class="ds-card--quiet" style="margin-bottom:var(--ds-space-05);">
+        <p class="body-sm" style="margin-bottom:var(--ds-space-02);">YOUR ANSWER</p>
+        <p class="h4" id="done-answer-text"></p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:var(--ds-space-03);align-items:center;">
+        <button class="ds-btn ds-btn--white" onclick="editAnswer()">Edit my answer</button>
+        <button class="ds-btn--pill" onclick="backToWaiting()">Back to lobby</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: GUESSING
+══════════════════════════════════════════════════════════ -->
+<div id="screen-guessing" class="screen">
+  <div class="topbar">
+    <span class="topbar-logo">Guess That <span>Thing</span></span>
+    <div class="flex gap-3">
+      <button class="ds-btn ds-btn--white" style="min-height:40px;font-size:13px;padding:var(--ds-space-02) var(--ds-space-05);" onclick="revealAll()">Reveal all</button>
+      <button class="ds-btn ds-btn--red"   style="min-height:40px;font-size:13px;padding:var(--ds-space-02) var(--ds-space-05);" onclick="goToResults()">See results →</button>
+    </div>
+  </div>
+  <div class="red-bar"></div>
+  <div class="page-wrap">
+    <div class="eyebrow mt-6">Guessing round</div>
+    <p class="body" id="guessing-q" style="margin-bottom:var(--ds-space-02);"></p>
+    <p class="body-sm" style="margin-bottom:var(--ds-space-05);">Read each answer and guess who said it — tap the card to reveal.</p>
+    <div id="cards-grid" style="display:flex;flex-wrap:wrap;gap:var(--ds-space-04);justify-content:flex-start;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     SCREEN: RESULTS
+══════════════════════════════════════════════════════════ -->
+<div id="screen-results" class="screen">
+  <div class="topbar"><span class="topbar-logo">Guess That <span>Thing</span></span></div>
+  <div class="red-bar"></div>
+  <div class="page-wrap-md">
+    <div style="margin-top:var(--ds-space-06);margin-bottom:var(--ds-space-06);">
+      <div class="eyebrow">Full reveal</div>
+      <h1 class="h2" style="margin-bottom:var(--ds-space-02);">The answers</h1>
+      <p class="body-sm" id="results-q"></p>
+    </div>
+    <div id="results-list"></div>
+    <div style="margin-top:var(--ds-space-07);display:flex;flex-direction:column;align-items:flex-start;gap:var(--ds-space-03);">
+      <button class="ds-btn ds-btn--red" onclick="playAgain()">Play another round</button>
+      <button class="ds-btn--pill" onclick="showScreen('screen-home')">Back to home</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════
+//  QUESTION BANK
+// ═══════════════════════════════════════════════════════════
+const QUESTIONS=[
+  "If money was no issue, what would your dream job be?",
+  "What skill do you wish you'd mastered by now?",
+  "What's a hobby you'd pick up if you had a free year?",
+  "If you could be world-class at one thing overnight, what would it be?",
+  "What does your ideal retirement look like?",
+  "What's one thing you'd do differently if you were starting your career again?",
+  "If you could live anywhere in the world for a year, where would you go?",
+  "If you had to live in a movie or TV universe, which one would you pick?",
+  "Name an album you could listen to on repeat forever.",
+  "What's a film you've watched more times than you'd like to admit?",
+  "What's your most irrational food opinion?",
+  "If you could only eat one cuisine for the rest of your life, what would it be?",
+  "What's the most niche thing you're actually a bit of an expert on?",
+  "What TV show do you think everyone should watch?",
+  "Name a song that's secretly a guilty pleasure.",
+  "What's the weirdest thing you find yourself genuinely enjoying?",
+  "What's your go-to karaoke song?",
+  "What's something small that gives you a disproportionate amount of joy?",
+  "What's a hill you'd die on in a completely trivial debate?",
+  "What's the most spontaneous thing you've ever done?",
+  "What's something you're weirdly competitive about?",
+  "What's a commonly loved thing you genuinely don't understand the hype around?",
+  "What's a food you hated as a kid but love now?",
+  "What superpower would you pick, and how would you immediately misuse it?",
+  "You have to become an expert in a subject you know nothing about — what do you choose?",
+  "If you could have dinner with anyone in history, who would it be?",
+  "You're stuck on a desert island with three albums — what do you bring?",
+  "If you could witness any historical event firsthand, what would you pick?",
+  "What animal would you be and why?",
+  "What job could you never do, no matter how well it paid?",
+  "If you had to swap careers with someone famous, who would it be?",
+  "What would the title of your autobiography be?",
+  "If you could instantly speak any language fluently, which would you pick?",
+  "What's the best piece of advice you've ever received?",
+  "What's the strangest job you had before consulting?",
+  "What's a non-obvious skill that has helped you more than expected in your career?",
+  "What's the most unusual thing you've ever eaten?",
+  "What's a totally underrated simple pleasure?",
+  "What was your childhood dream job?",
+  "What's a random fact you know that impresses people at parties?",
+  "What game, sport, or activity are you better at than most people?",
+  "What's something you were convinced you'd hate but ended up loving?",
+  "What's the worst fashion choice you made in your teens?",
+  "What's a trend you refuse to get on board with?",
+  "What's one thing on your bucket list?",
+  "What's the best place you've ever visited?",
+  "What's the most memorable meal you've ever had?",
+  "What's a trip you've always dreamed of taking?",
+  "What's something you've changed your mind about in the last few years?",
+  "What's one thing you know now that you wish you'd known at 21?",
+  "What's something you've been meaning to learn but keep putting off?",
+  "What do you think will be completely different about the world in 20 years?",
+  "What's the best decision you've made that you almost didn't make?",
+  "Morning person or night owl — and is it really a choice?",
+  "If you could have one meal perfectly cooked for you every day, what would it be?",
+  "What's the most interesting person you've met while travelling?",
+  "What's your most controversial opinion about work?",
+  "What's something you do before a big presentation that no one knows about?",
+  "If you could only use one app for the rest of your life, what would you keep?",
+  "What's the one thing you always pack when travelling that others wouldn't think of?",
+];
+
+// ═══════════════════════════════════════════════════════════
+//  AVATAR GRADIENTS (for initials fallback)
+// ═══════════════════════════════════════════════════════════
+// Uses company red + neutral dark to stay on-brand
+const GRAD_PAIRS=[
+  ['#CC0000','#9D1B22'],['#333333','#121212'],['#990000','#660000'],
+  ['#717171','#333333'],['#A3A3A3','#717171'],['#CC0000','#333333'],
+];
+
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let roster=[],selIds=[],roomCode=null,question='',activePlayers=[],submissions={},cards=[],selectedPlayer=null;
+let firebaseUrl='',sseSource=null,pollTimer=null;
+let editMemberId=null,modalPhoto=null,confirmCb=null;
+let displayedQIds=[];
+
+// ═══════════════════════════════════════════════════════════
+//  LOCALSTORAGE
+// ═══════════════════════════════════════════════════════════
+function ls(k,v){if(v===undefined){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null;}catch{return null;}}else{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}}
+function loadRoster(){roster=ls('gtt-roster')||[];}
+function saveRoster(){ls('gtt-roster',roster);}
+function getFirebaseUrl(){return localStorage.getItem('gtt-firebase')||'';}
+
+// ═══════════════════════════════════════════════════════════
+//  FIREBASE
+// ═══════════════════════════════════════════════════════════
+function fbUrl(p){return`${firebaseUrl}/${p}.json`;}
+async function fbGet(p){const r=await fetch(fbUrl(p));if(!r.ok)throw new Error('FB '+r.status);return r.json();}
+async function fbPut(p,d){const r=await fetch(fbUrl(p),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});if(!r.ok)throw new Error('FB PUT '+r.status);return r.json();}
+async function fbPatch(p,d){const r=await fetch(fbUrl(p),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});if(!r.ok)throw new Error('FB PATCH '+r.status);return r.json();}
+
+function startSSE(code){
+  stopAll();
+  try{
+    sseSource=new EventSource(`${firebaseUrl}/games/${code}.json?stream=true`);
+    sseSource.addEventListener('put',e=>{try{const d=JSON.parse(e.data);if(d&&d.data)onRemoteUpdate(d.data);}catch{}});
+    sseSource.addEventListener('patch',e=>{try{const d=JSON.parse(e.data);if(d&&d.data)onRemoteUpdate(d.data);}catch{}});
+    sseSource.onerror=()=>{stopSSE();startPolling(code);};
+  }catch{startPolling(code);}
+}
+function stopSSE(){if(sseSource){sseSource.close();sseSource=null;}}
+function startPolling(code){
+  stopPolling();
+  pollTimer=setInterval(async()=>{try{const d=await fbGet(`games/${code}`);if(d)onRemoteUpdate(d);}catch{}},3000);
+}
+function stopPolling(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;}}
+function stopAll(){stopSSE();stopPolling();}
+function onRemoteUpdate(data){
+  if(!data)return;
+  const changed=JSON.stringify(data.submissions)!==JSON.stringify(submissions);
+  if(data.question&&data.question!==question){question=data.question;const qd=document.getElementById('q-display');if(qd)qd.textContent=question;}
+  if(data.submissions)submissions=data.submissions;
+  if(data.activePlayers)activePlayers=data.activePlayers;
+  if(changed&&document.getElementById('screen-waiting').classList.contains('active'))renderWaiting();
+}
+async function saveGameFull(){if(!firebaseUrl||!roomCode)return;const p=activePlayers.map(({id,name})=>({id,name}));await fbPut(`games/${roomCode}`,{question,activePlayers:p,submissions:{},createdAt:Date.now()});}
+async function saveSubmission(pid,sub){if(!firebaseUrl||!roomCode)return;await fbPatch(`games/${roomCode}/submissions`,{[pid]:sub});}
+async function saveQuestionRemote(q){if(!firebaseUrl||!roomCode)return;await fbPatch(`games/${roomCode}`,{question:q});}
+
+// ═══════════════════════════════════════════════════════════
+//  FIREBASE SETUP
+// ═══════════════════════════════════════════════════════════
+function saveFirebaseUrl(){
+  let url=document.getElementById('fb-url-input').value.trim().replace(/\/+$/,'');
+  // If field is empty, fall back to the pre-filled URL
+  if(!url) url = 'https://guess-that-thing-default-rtdb.europe-west1.firebasedatabase.app';
+  if(!url.startsWith('https://')){showToast('URL should start with https://');return;}
+  localStorage.setItem('gtt-firebase',url);
+  firebaseUrl=url;updateFbBtn();showToast('Firebase connected');showScreen('screen-home');
+}
+function updateFbBtn(){const btn=document.getElementById('fb-status-btn');if(!btn)return;btn.textContent=firebaseUrl?'Firebase ✓':'Firebase settings';btn.style.color=firebaseUrl?'var(--ds-success)':'var(--ds-text-regular)';}
+
+// ═══════════════════════════════════════════════════════════
+//  IMAGE GENERATION PROXY
+// ═══════════════════════════════════════════════════════════
+const PROXY_URL='https://gtt-proxy-1i9y.onrender.com';
+async function generateImage(answer,question){
+  try{
+    const r=await fetch(`${PROXY_URL}/generate-image`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({answer,question})});
+    if(!r.ok)return null;
+    const d=await r.json();
+    return d.url?{type:'image',url:d.url}:null;
+  }catch{return null;}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  COVER ART FALLBACK
+// ═══════════════════════════════════════════════════════════
+async function fetchCover(ans){
+  const lo=ans.toLowerCase();
+  const hasAlbumKw=/\b(album|record|lp|ep|mixtape|vinyl|discography)\b/.test(lo);
+  const hasMusicKw=/\b(by |from |artist |band |singer |rapper )/.test(lo);
+  const hasMovieKw=/\b(film|movie|series|show|documentary|directed by)\b/.test(lo);
+  const hasBookKw=/\b(book|novel|memoir|biography|by )/.test(lo);
+  const hasPodKw=/\b(podcast)\b/.test(lo);
+  const term=ans.replace(/\b(the|a|an|by|from|with|my fav(ou?rite)?|probably|definitely|honestly|something like|i('d| would| think)( go with| pick| say| choose)?)\b/gi,'').replace(/\b(album|record|lp|ep|mixtape|vinyl|film|movie|series|show|documentary|book|novel|memoir|biography|podcast)\b/gi,'').trim().slice(0,80);
+  if(term.length<4)return{type:'svg'};
+  const isVague=/^(jazz|rock|pop|hip.?hop|classical|country|r&b|soul|electronic|techno|house|metal|punk|indie|folk|blues|reggae|latin)$/i.test(term.trim());
+  const isCuisine=/^(italian|french|japanese|chinese|indian|mexican|thai|spanish|greek|korean|vietnamese|turkish|moroccan|sushi|pasta|pizza|curry|ramen|tacos)$/i.test(term.trim());
+  const isActivity=/^(cooking|reading|writing|running|cycling|swimming|hiking|gaming|drawing|painting|photography|yoga|dancing|singing|coding)$/i.test(term.trim());
+  if(isVague||isCuisine||isActivity)return{type:'svg'};
+  const doMusic=hasAlbumKw||hasMusicKw,doMovie=hasMovieKw,doBook=hasBookKw,doPod=hasPodKw;
+  if(!doMusic&&!doMovie&&!doBook&&!doPod)return{type:'svg'};
+  try{
+    if(doMusic||doPod){
+      const entity=doPod?'podcast':'album',media=doPod?'podcast':'music';
+      const r=await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=${entity}&limit=3&media=${media}`);
+      const d=await r.json();
+      if(d.results?.length){const top=d.results[0];const rn=(top.collectionName||top.trackName||'').toLowerCase();const tw=term.toLowerCase().split(/\s+/).filter(w=>w.length>2);const mc=tw.filter(w=>rn.includes(w)).length;if(mc>=Math.max(1,Math.floor(tw.length*0.5))){const art=(top.artworkUrl100||'').replace('100x100bb','400x400bb');if(art)return{type:'image',url:art};}}
+    }
+    if(doMovie){
+      const r=await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=movie&limit=3&media=movie`);
+      const d=await r.json();
+      if(d.results?.length){const top=d.results[0];const rn=(top.trackName||'').toLowerCase();const tw=term.toLowerCase().split(/\s+/).filter(w=>w.length>2);const mc=tw.filter(w=>rn.includes(w)).length;if(mc>=Math.max(1,Math.floor(tw.length*0.5))){const art=(top.artworkUrl100||'').replace('100x100bb','400x400bb');if(art)return{type:'image',url:art};}}
+    }
+    if(doBook){
+      const r=await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(term)}&limit=3&fields=title,cover_i`);
+      const d=await r.json();
+      if(d.docs?.length){const top=d.docs[0];const rn=(top.title||'').toLowerCase();const tw=term.toLowerCase().split(/\s+/).filter(w=>w.length>2);const mc=tw.filter(w=>rn.includes(w)).length;if(mc>=Math.max(1,Math.floor(tw.length*0.5))&&top.cover_i)return{type:'image',url:`https://covers.openlibrary.org/b/id/${top.cover_i}-L.jpg`};}
+    }
+  }catch{}
+  return{type:'svg'};
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SVG / MEDIA HELPERS
+// ═══════════════════════════════════════════════════════════
+// On-brand SVG: red + grey geometric pattern, no bright candy colors
+function svgArt(emoji,idx){
+  const fills=['#CC0000','#9D1B22','#F9F9F9','#ECECEC','#D2D2D1'];
+  const f=fills[idx%fills.length];
+  const gl=[...(emoji||'🎭')].slice(0,4);
+  const pos=[{x:50,y:38},{x:50,y:72},{x:26,y:55},{x:74,y:55}];
+  const fs=gl.length===1?36:gl.length===2?26:20;
+  const dots=[15,35,55,75,95].flatMap(x=>[20,50,80].map(y=>`<circle cx="${x}" cy="${y}" r="1" fill="${f==='#F9F9F9'?'#CCCCCC':'rgba(255,255,255,0.2)"}"/>`)).join('');
+  const txts=gl.map((g,i)=>`<text x="${pos[i]?.x??50}" y="${pos[i]?.y??50}" text-anchor="middle" dominant-baseline="middle" font-size="${fs}" style="user-select:none">${g}</text>`).join('');
+  const bg=idx%2===0?'#CC0000':'#333333';
+  return`<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block;"><rect width="100" height="100" fill="${bg}"/><rect x="0" y="0" width="100" height="4" fill="rgba(0,0,0,0.3)"/>${dots}${txts}</svg>`;
+}
+
+function localEmojiArt(answer){
+  const lo=answer.toLowerCase();
+  const maps=[[/\b(music|album|band|song|guitar|piano|drum|sing|concert|vinyl)\b/,'🎵🎸🎤🎶'],[/\b(film|movie|cinema|actor|direct|hollywood|netflix|watch)\b/,'🎬🎥🍿🎞️'],[/\b(book|read|novel|author|write|story|fiction)\b/,'📚📖✍️🖊️'],[/\b(food|eat|cook|chef|restaurant|meal|recipe|taste)\b/,'🍽️👨‍🍳🥘'],[/\b(travel|trip|country|city|flight|beach|mountain|hotel)\b/,'✈️🌍🗺️🧳'],[/\b(sport|run|gym|football|tennis|swim|cycling|fitness)\b/,'🏃⚽🎾🏋️'],[/\b(tech|code|software|app|data|compute|ai|digital)\b/,'💻🤖⌨️🔧'],[/\b(space|star|planet|astronaut|rocket|galaxy)\b/,'🚀🌟🪐🌌'],[/\b(game|chess|poker|board|video|rpg|puzzle)\b/,'🎮♟️🎲🏆'],[/\b(coffee|cafe|espresso|latte|brew)\b/,'☕🫘🧋'],[/\b(wine|beer|cocktail|bar|whisky|gin|champagne)\b/,'🍷🍺🍸🥂']];
+  for(const[rx,art]of maps)if(rx.test(lo))return art;
+  const s={'a':'⭐🎯','b':'💡🔮','c':'☀️💎','d':'🎭🌙','e':'🌿🎨','f':'🔥⚡','g':'💚🌿','h':'🏔️🌅','i':'💡⭐','j':'🎸🎵','k':'🔑💫','l':'❤️💫','m':'🌙⭐','n':'🌙⭐','o':'🌊💫','p':'🎨💫','q':'🔮⭐','r':'🌹❤️','s':'⭐💫','t':'🌿🎯','u':'☂️💫','v':'💫⭐','w':'🌊💫','x':'💫⭐','y':'💛💫','z':'⚡💫'};
+  return s[lo[0]]||'🎭✨';
+}
+
+function mediaHTML(cover,emoji,idx){
+  if(cover?.type==='image'&&cover.url)return`<img src="${cover.url}" alt="" onerror="this.outerHTML='${svgArt(emoji,idx).replace(/'/g,"&#39;")}'" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+  return svgArt(emoji,idx);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  AVATAR HELPERS
+// ═══════════════════════════════════════════════════════════
+function mkAvatar(person,size,xtra=''){
+  const[g1,g2]=GRAD_PAIRS[(person?.name?.charCodeAt(0)||0)%GRAD_PAIRS.length];
+  if(person?.photo){const img=document.createElement('img');img.src=person.photo;img.className='avatar';img.style.cssText=`width:${size}px;height:${size}px;${xtra}`;img.onerror=()=>img.replaceWith(mkInit(person,size,xtra));return img;}
+  return mkInit(person,size,xtra);
+}
+function mkInit(person,size,xtra=''){
+  const[g1,g2]=GRAD_PAIRS[(person?.name?.charCodeAt(0)||0)%GRAD_PAIRS.length];
+  const d=document.createElement('div');d.className='avatar-init';
+  d.style.cssText=`width:${size}px;height:${size}px;background:${g1};font-size:${Math.round(size*.4)}px;${xtra}`;
+  d.textContent=(person?.name||'?')[0].toUpperCase();return d;
+}
+function setAv(el,person,size,xtra=''){el.innerHTML='';el.appendChild(mkAvatar(person,size,xtra));}
+
+// ═══════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════
+function genId(){return Math.random().toString(36).slice(2,9);}
+function genCode(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='GTT-';for(let i=0;i<3;i++)s+=c[Math.floor(Math.random()*c.length)];return s;}
+function shuffle(a){const r=[...a];for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];}return r;}
+function readFile(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsDataURL(f);});}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+function showLoading(m='Loading…'){document.getElementById('loading-text').textContent=m;document.getElementById('loading').classList.add('show');}
+function hideLoading(){document.getElementById('loading').classList.remove('show');}
+function showConfirm(m,cb){document.getElementById('confirm-msg').textContent=m;document.getElementById('confirm-overlay').classList.add('show');confirmCb=cb;}
+function confirmCancel(){document.getElementById('confirm-overlay').classList.remove('show');confirmCb=null;}
+document.getElementById('confirm-ok').onclick=()=>{document.getElementById('confirm-overlay').classList.remove('show');if(confirmCb){confirmCb();confirmCb=null;}};
+function confetti(){
+  const cols=['#CC0000','#9D1B22','#333333','#CCCCCC','#F9F9F9'];
+  for(let i=0;i<50;i++){const el=document.createElement('div');el.className='confetti-piece';el.style.cssText=`left:${Math.random()*100}vw;top:-10px;background:${cols[i%cols.length]};width:${6+Math.random()*6}px;height:${6+Math.random()*6}px;animation-duration:${2+Math.random()*2}s;animation-delay:${Math.random()*0.6}s;`;document.body.appendChild(el);el.addEventListener('animationend',()=>el.remove());}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SCREEN MANAGEMENT
+// ═══════════════════════════════════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='screen-home')renderHome();
+  if(id==='screen-team')renderTeam();
+  if(id==='screen-create')renderCreate();
+  if(id==='screen-pick-q')renderQuestionPicker();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HOME
+// ═══════════════════════════════════════════════════════════
+function renderHome(){
+  updateFbBtn();
+  const prev=document.getElementById('home-roster-preview');prev.innerHTML='';
+  const shown=roster.slice(0,8);
+  shown.forEach((m,i)=>{const av=mkAvatar(m,40,`margin-left:${i>0?-10:0}px;border:2px solid white;z-index:${shown.length-i};`);prev.appendChild(av);});
+  if(roster.length>8){const more=document.createElement('div');more.className='avatar-init';more.style.cssText='width:40px;height:40px;background:var(--ds-gray-medium);font-size:12px;color:var(--ds-text-dark);margin-left:-10px;border:2px solid white;';more.textContent=`+${roster.length-8}`;prev.appendChild(more);}
+  document.getElementById('home-team-btn').textContent=roster.length>0?`Manage team (${roster.length})`:'Set up your team';
+}
+function goToCreate(){selIds=roster.map(m=>m.id);showScreen('screen-create');}
+
+// ═══════════════════════════════════════════════════════════
+//  TEAM
+// ═══════════════════════════════════════════════════════════
+function renderTeam(){
+  const list=document.getElementById('roster-list'),empty=document.getElementById('roster-empty');
+  list.innerHTML='';
+  if(roster.length===0){empty.style.display='block';return;}
+  empty.style.display='none';
+  roster.forEach(m=>{
+    const row=document.createElement('div');row.className='roster-row';
+    row.appendChild(mkAvatar(m,44));
+    const nm=document.createElement('div');nm.style.cssText='flex:1;font-weight:700;font-size:15px;';nm.textContent=m.name;row.appendChild(nm);
+    const btns=document.createElement('div');btns.className='flex gap-2';
+    const e=document.createElement('button');e.className='ds-btn--pill';e.textContent='Edit';e.onclick=()=>openMemberModal(m);
+    const d=document.createElement('button');d.className='ds-btn--pill';d.style.cssText='color:var(--ds-color-company-red);border-color:var(--ds-color-company-red);';d.textContent='Remove';d.onclick=()=>{roster=roster.filter(x=>x.id!==m.id);saveRoster();renderTeam();};
+    btns.append(e,d);row.appendChild(btns);list.appendChild(row);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MEMBER MODAL
+// ═══════════════════════════════════════════════════════════
+function openMemberModal(member){
+  editMemberId=member?.id||null;modalPhoto=member?.photo||null;
+  document.getElementById('member-title').textContent=member?'Edit team member':'Add team member';
+  document.getElementById('modal-name').value=member?.name||'';
+  document.getElementById('photo-file').value='';
+  document.getElementById('photo-btn').textContent=modalPhoto?'Change photo':'Upload photo';
+  document.getElementById('rm-photo-btn').style.display=modalPhoto?'block':'none';
+  setAv(document.getElementById('modal-av'),{name:member?.name||'?',photo:modalPhoto},72);
+  document.getElementById('member-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('modal-name').focus(),100);
+}
+function closeMemberModal(){document.getElementById('member-overlay').classList.remove('show');}
+async function onPhotoFile(e){const f=e.target.files?.[0];if(!f)return;modalPhoto=await readFile(f);document.getElementById('photo-btn').textContent='Change photo';document.getElementById('rm-photo-btn').style.display='block';setAv(document.getElementById('modal-av'),{name:document.getElementById('modal-name').value||'?',photo:modalPhoto},72);}
+function removePhoto(){modalPhoto=null;document.getElementById('photo-btn').textContent='Upload photo';document.getElementById('rm-photo-btn').style.display='none';setAv(document.getElementById('modal-av'),{name:document.getElementById('modal-name').value||'?',photo:null},72);}
+function saveMember(){
+  const name=document.getElementById('modal-name').value.trim();if(!name){showToast('Enter a name');return;}
+  if(editMemberId){const i=roster.findIndex(m=>m.id===editMemberId);if(i>=0)roster[i]={...roster[i],name,photo:modalPhoto};}
+  else roster.push({id:genId(),name,photo:modalPhoto});
+  saveRoster();closeMemberModal();renderTeam();renderHome();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CREATE
+// ═══════════════════════════════════════════════════════════
+function renderCreate(){
+  const grid=document.getElementById('create-grid'),empty=document.getElementById('create-empty'),ctrl=document.getElementById('create-controls');
+  grid.innerHTML='';
+  if(roster.length===0){empty.style.display='block';ctrl.style.display='none';return;}
+  empty.style.display='none';ctrl.style.display='block';
+  roster.forEach(m=>{
+    const tile=document.createElement('button');
+    tile.className='player-tile'+(selIds.includes(m.id)?' sel':'');
+    if(selIds.includes(m.id)){const t=document.createElement('div');t.className='tick';t.innerHTML='<svg viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>';tile.appendChild(t);}
+    tile.appendChild(mkAvatar(m,48));
+    const lb=document.createElement('span');lb.textContent=m.name;tile.appendChild(lb);
+    tile.onclick=()=>{selIds.includes(m.id)?selIds=selIds.filter(id=>id!==m.id):selIds.push(m.id);renderCreate();};
+    grid.appendChild(tile);
+  });
+  const n=selIds.length,btn=document.getElementById('create-btn');
+  btn.disabled=n<2;btn.textContent=n<2?'Select at least 2 players':`Choose question for ${n} players →`;
+}
+function selAll(){selIds=roster.map(m=>m.id);renderCreate();}
+function selNone(){selIds=[];renderCreate();}
+function proceedToQuestion(){
+  activePlayers=roster.filter(m=>selIds.includes(m.id));
+  if(activePlayers.length<2){showToast('Select at least 2 players');return;}
+  if(!firebaseUrl){showToast('Connect Firebase first');showScreen('screen-firebase');return;}
+  showScreen('screen-pick-q');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  QUESTION PICKER
+// ═══════════════════════════════════════════════════════════
+function renderQuestionPicker(){document.getElementById('custom-q-input').value='';shuffleQuestionList();}
+function shuffleQuestionList(){
+  const sh=shuffle([...Array(QUESTIONS.length).keys()]);
+  displayedQIds=sh.slice(0,8);
+  const list=document.getElementById('q-option-list');list.innerHTML='';
+  displayedQIds.forEach(idx=>{
+    const btn=document.createElement('button');btn.className='q-option';btn.textContent=QUESTIONS[idx];
+    btn.onclick=()=>useQuestion(QUESTIONS[idx]);list.appendChild(btn);
+  });
+}
+function useCustomQuestion(){const q=document.getElementById('custom-q-input').value.trim();if(!q){showToast('Type a question first');return;}useQuestion(q);}
+async function useQuestion(q){
+  question=q;roomCode=genCode();submissions={};
+  showLoading('Setting up game…');
+  try{
+    const p=activePlayers.map(({id,name})=>({id,name}));
+    await fbPut(`games/${roomCode}`,{question,activePlayers:p,submissions:{},createdAt:Date.now()});
+    startSSE(roomCode);renderWaiting();showScreen('screen-waiting');
+  }catch(e){showToast('Error: '+e.message);}
+  finally{hideLoading();}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  JOIN
+// ═══════════════════════════════════════════════════════════
+async function joinRoom(){
+  const code=document.getElementById('join-code').value.trim().toUpperCase();
+  if(!code){showToast('Enter a room code');return;}
+  if(!firebaseUrl){showToast('Connect Firebase first');showScreen('screen-firebase');return;}
+  showLoading('Joining game…');
+  try{
+    const data=await fbGet(`games/${code}`);
+    if(!data){showToast('Room not found — check the code');hideLoading();return;}
+    roomCode=code;question=data.question;
+    activePlayers=(data.activePlayers||[]).map(rp=>{const local=roster.find(m=>m.id===rp.id||m.name===rp.name);return local?{...rp,photo:local.photo}:{...rp};});
+    submissions=data.submissions||{};
+    startSSE(roomCode);renderWaiting();showScreen('screen-waiting');
+  }catch(e){showToast('Could not join: '+e.message);}
+  finally{hideLoading();}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  WAITING
+// ═══════════════════════════════════════════════════════════
+function renderWaiting(){
+  const total=activePlayers.length,done=Object.keys(submissions).length;
+  document.getElementById('room-code-display').textContent=roomCode;
+  // topbar
+  const tr=document.getElementById('waiting-top-right');tr.innerHTML='';
+  const countSpan=document.createElement('span');countSpan.className='body-sm';countSpan.textContent=`${done}/${total} submitted`;tr.appendChild(countSpan);
+  activePlayers.slice(0,5).forEach((p,i)=>{const av=mkAvatar(p,28,`margin-left:${i>0?-6:0}px;border:2px solid white;opacity:${submissions[p.id]?1:.4};`);tr.appendChild(av);});
+  // question
+  document.getElementById('q-display').textContent=question;
+  // progress
+  const chip=document.getElementById('sub-chip');chip.textContent=`${done} / ${total}`;
+  chip.className=done===total?'badge badge--green':'badge';
+  document.getElementById('sub-bar').style.width=`${total?(done/total)*100:0}%`;
+  // submission rows
+  const sn=document.getElementById('sub-names');sn.innerHTML='';
+  activePlayers.forEach(p=>{
+    const isDone=!!submissions[p.id];
+    const row=document.createElement('div');row.className='sub-row';
+    const av=mkAvatar(p,32,`opacity:${isDone?1:.5};`);row.appendChild(av);
+    const lb=document.createElement('span');lb.style.cssText='flex:1;font-size:14px;font-weight:700;color:var(--ds-text-dark);';lb.textContent=p.name;row.appendChild(lb);
+    if(isDone){const ok=document.createElement('span');ok.style.cssText='font-size:13px;color:var(--ds-success);font-weight:700;';ok.textContent='Submitted ✓';row.appendChild(ok);}
+    else{const pending=document.createElement('span');pending.style.cssText='font-size:13px;color:var(--ds-text-regular);';pending.textContent='Waiting…';row.appendChild(pending);}
+    sn.appendChild(row);
+  });
+  // submit picker
+  const sp=document.getElementById('submit-picker');sp.innerHTML='';
+  activePlayers.forEach(p=>{
+    const isDone=!!submissions[p.id];
+    const btn=document.createElement('button');
+    btn.style.cssText=`display:flex;flex-direction:column;align-items:center;gap:var(--ds-space-02);padding:var(--ds-space-03) var(--ds-space-04);background:${isDone?'var(--ds-success-light)':'var(--ds-gray-x-light)'};border:1px solid ${isDone?'var(--ds-success)':'var(--ds-stroke)'};cursor:pointer;font-family:var(--ds-font-sans);transition:all 120ms;`;
+    btn.appendChild(mkAvatar(p,40));
+    const lb=document.createElement('span');lb.style.cssText=`font-size:12px;font-weight:700;color:${isDone?'var(--ds-success)':'var(--ds-text-dark)'};`;lb.textContent=isDone?'✓ '+p.name:p.name;btn.appendChild(lb);
+    btn.onclick=()=>openSubmit(p);sp.appendChild(btn);
+  });
+  // guess button
+  const gb=document.getElementById('guess-btn');
+  gb.disabled=done===0;
+  gb.textContent=done>=total?'Everyone\'s in — start guessing →':'Start guessing';
+  const mn=document.getElementById('missing-note');const miss=total-done;
+  mn.style.display=(done>0&&miss>0)?'block':'none';
+  mn.textContent=`${miss} player${miss>1?'s':''} still to submit`;
+}
+function copyRoomCode(){navigator.clipboard.writeText(roomCode).then(()=>showToast('Room code copied')).catch(()=>showToast('Code: '+roomCode));}
+function changeQuestion(){showScreen('screen-pick-q');}
+function startEditQ(){document.getElementById('q-display').style.display='none';document.getElementById('q-edit').style.display='block';document.getElementById('q-draft').value=question;document.getElementById('q-draft').focus();}
+function cancelEditQ(){document.getElementById('q-display').style.display='block';document.getElementById('q-edit').style.display='none';}
+async function saveQ(){const q=document.getElementById('q-draft').value.trim();if(!q)return;question=q;document.getElementById('q-display').textContent=q;cancelEditQ();await saveQuestionRemote(q);}
+async function manualRefresh(){
+  if(!firebaseUrl||!roomCode)return;
+  const icon=document.getElementById('refresh-icon');
+  if(icon){icon.style.display='inline-block';icon.style.animation='spin 0.6s linear';setTimeout(()=>{icon.style.animation='';},700);}
+  try{const data=await fbGet(`games/${roomCode}`);if(data){if(data.question)question=data.question;if(data.submissions)submissions=data.submissions;if(data.activePlayers)activePlayers=data.activePlayers;renderWaiting();showToast('Refreshed');}}
+  catch(e){showToast('Could not refresh — check connection');}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SUBMIT
+// ═══════════════════════════════════════════════════════════
+function openSubmit(player){
+  selectedPlayer=player;const ex=submissions[player.id];
+  document.getElementById('submit-player-name').textContent=player.name;
+  setAv(document.getElementById('submit-player-av'),player,32);
+  document.getElementById('submit-q').textContent=question;
+  document.getElementById('answer-input').value=ex?.answer||'';
+  if(ex)showDone(ex.answer,player);
+  else{document.getElementById('submit-form').style.display='block';document.getElementById('submit-done').style.display='none';setTimeout(()=>document.getElementById('answer-input').focus(),100);}
+  showScreen('screen-submit');
+}
+function showDone(ans,player){
+  document.getElementById('submit-form').style.display='none';document.getElementById('submit-done').style.display='block';
+  setAv(document.getElementById('submit-done-av'),player||selectedPlayer,56);
+  document.getElementById('done-answer-text').textContent=ans;
+}
+async function submitAnswer(){
+  const ans=document.getElementById('answer-input').value.trim();
+  if(!ans){showToast('Type your answer first');return;}
+  showLoading('Saving your answer…');
+  try{
+    const emoji=localEmojiArt(ans);
+    let cover=await generateImage(ans,question);
+    if(!cover)cover=await fetchCover(ans);
+    const sub={answer:ans,emojiArt:emoji,cover};
+    submissions[selectedPlayer.id]=sub;
+    await saveSubmission(selectedPlayer.id,sub);
+    showDone(ans,selectedPlayer);
+  }catch(e){showToast('Submission failed — try again');}
+  finally{hideLoading();}
+}
+function editAnswer(){document.getElementById('submit-form').style.display='block';document.getElementById('submit-done').style.display='none';setTimeout(()=>document.getElementById('answer-input').focus(),50);}
+function backToWaiting(){renderWaiting();showScreen('screen-waiting');}
+
+// ═══════════════════════════════════════════════════════════
+//  GUESSING
+// ═══════════════════════════════════════════════════════════
+function handleGuessClick(){
+  const miss=activePlayers.length-Object.keys(submissions).length;
+  if(miss>0)showConfirm(`${miss} player${miss>1?" haven't":" hasn't"} submitted yet. Start anyway?`,startGuessing);
+  else startGuessing();
+}
+function startGuessing(){
+  stopAll();
+  cards=shuffle(activePlayers.filter(p=>submissions[p.id]).map(p=>({...submissions[p.id],name:p.name,playerId:p.id,person:p})));
+  document.getElementById('guessing-q').textContent=`"${question}"`;
+  renderCards(false);showScreen('screen-guessing');
+}
+function renderCards(allFlipped){
+  const grid=document.getElementById('cards-grid');grid.innerHTML='';
+  cards.forEach((card,i)=>{
+    const wrap=document.createElement('div');wrap.className='flip-wrap'+(allFlipped?' flipped':'');
+    wrap.innerHTML=`<div class="flip-inner">
+      <div class="flip-face flip-front">
+        <div class="card-text-half">
+          <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ds-text-regular);">Card ${i+1}</span>
+          <div style="font-size:clamp(13px,1.6vw,15px);font-weight:700;color:var(--ds-text-dark);line-height:1.5;flex:1;display:flex;align-items:center;padding:var(--ds-space-03) 0;">
+            <span style="border-left:3px solid var(--ds-color-company-red);padding-left:var(--ds-space-03);">${esc(card.answer)}</span>
+          </div>
+          <span style="font-size:11px;color:var(--ds-text-regular);">Tap to reveal →</span>
+        </div>
+        <div class="card-img-half">${mediaHTML(card.cover,card.emojiArt,i)}</div>
+      </div>
+      <div class="flip-face flip-back">
+        <span style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ds-text-regular);">This was…</span>
+        <div id="bav-${i}"></div>
+        <span style="font-size:clamp(18px,4vw,24px);font-weight:700;color:var(--ds-text-black);text-align:center;padding:0 var(--ds-space-04);">${esc(card.name)}</span>
+      </div>
+    </div>`;
+    wrap.onclick=()=>wrap.classList.toggle('flipped');
+    grid.appendChild(wrap);
+    const bav=document.getElementById(`bav-${i}`);
+    if(bav)bav.appendChild(mkAvatar(card.person,56,'border:2px solid var(--ds-color-company-red);'));
+  });
+}
+function revealAll(){document.querySelectorAll('.flip-wrap').forEach((w,i)=>setTimeout(()=>w.classList.add('flipped'),i*150));setTimeout(confetti,400);}
+
+// ═══════════════════════════════════════════════════════════
+//  RESULTS
+// ═══════════════════════════════════════════════════════════
+function goToResults(){
+  confetti();
+  document.getElementById('results-q').textContent=`"${question}"`;
+  const list=document.getElementById('results-list');list.innerHTML='';
+  cards.forEach((card,i)=>{
+    const row=document.createElement('div');
+    row.style.cssText=`display:flex;align-items:center;border:1px solid var(--ds-stroke);border-left:3px solid var(--ds-color-company-red);margin-bottom:var(--ds-space-03);overflow:hidden;background:var(--ds-color-white);animation:slideUp 0.3s ${i*0.06}s ease both;`;
+    const med=document.createElement('div');med.style.cssText='width:72px;height:72px;flex-shrink:0;';med.innerHTML=mediaHTML(card.cover,card.emojiArt,i);row.appendChild(med);
+    const body=document.createElement('div');body.style.cssText='flex:1;padding:var(--ds-space-03) var(--ds-space-04);min-width:0;';
+    const nr=document.createElement('div');nr.style.cssText='display:flex;align-items:center;gap:var(--ds-space-03);margin-bottom:var(--ds-space-02);';
+    nr.appendChild(mkAvatar(card.person,28));
+    const nm=document.createElement('span');nm.style.cssText='font-weight:700;font-size:15px;color:var(--ds-text-black);';nm.textContent=card.name;nr.appendChild(nm);body.appendChild(nr);
+    const at=document.createElement('div');at.style.cssText='font-size:14px;color:var(--ds-text-dark);line-height:1.4;';at.textContent=`"${card.answer}"`;body.appendChild(at);row.appendChild(body);list.appendChild(row);
+  });
+  showScreen('screen-results');
+}
+function playAgain(){stopAll();submissions={};cards=[];roomCode=null;question='';selectedPlayer=null;selIds=roster.map(m=>m.id);showScreen('screen-create');}
+
+// ═══════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════
+const PREFILLED_FIREBASE='https://guess-that-thing-default-rtdb.europe-west1.firebasedatabase.app';
+loadRoster();
+// Always ensure the pre-filled Firebase URL is set — overwrite only if empty or still default
+const existingFb = getFirebaseUrl();
+if(!existingFb || existingFb === PREFILLED_FIREBASE || !existingFb.startsWith('https://')) {
+  localStorage.setItem('gtt-firebase', PREFILLED_FIREBASE);
+}
+firebaseUrl = getFirebaseUrl();
+document.getElementById('fb-url-input').value = firebaseUrl;
+showScreen('screen-home');
+</script>
+</body>
+</html>
