@@ -153,7 +153,7 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
 
 <!-- HOME -->
 <div id="screen-home" class="screen active">
-  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><span style="font-size:11px;color:var(--tr);font-weight:700;letter-spacing:.05em;">v1.14</span></div>
+  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><span style="font-size:11px;color:var(--tr);font-weight:700;letter-spacing:.05em;">v1.15</span></div>
   <div class="red-bar"></div>
   <div class="page-c">
     <div style="max-width:480px;width:100%;">
@@ -205,7 +205,12 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
   <div class="red-bar"></div>
   <div class="pw-sm">
     <div class="eyebrow mt6">Pick a question</div>
-    <h2 class="h3 mt2 mb5">What are we guessing today?</h2>
+    <h2 class="h3 mt2 mb4">What are we guessing today?</h2>
+    <div style="margin-bottom:24px;text-align:center;">
+      <p class="sm mb2">Room code — share this while you pick a question:</p>
+      <div id="pick-q-code" class="room-code" style="font-size:52px;letter-spacing:.18em;" onclick="copyPickCode()"></div>
+      <p class="xs mt2">Tap to copy</p>
+    </div>
     <div class="card mb5"><label class="lbl" for="custom-q-input">Write your own</label><textarea class="inp" id="custom-q-input" rows="2" placeholder="Type a custom question…" style="margin-bottom:14px;"></textarea><button class="btn btn-r" onclick="useCustomQuestion()">Use this question</button></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><span class="h4">Or pick from the list</span><button class="pill" onclick="shuffleQList()">Shuffle</button></div>
     <div id="q-option-list" style="display:flex;flex-direction:column;gap:8px;"></div>
@@ -538,10 +543,26 @@ function onRemoteUpdate(data){
   if(document.getElementById('screen-vote-waiting').classList.contains('active'))renderVoteWaiting();
 }
 
-async function saveSubmission(pid,sub){if(!roomCode)return;await dbPatch(`games/${roomCode}/submissions`,{[pid]:sub});}
+async function saveSubmission(pid,sub){
+  if(!roomCode)return;
+  // Patch top-level submissions object — server only handles /games/:code not sub-paths
+  await dbPatch(`games/${roomCode}`,{submissions:{...submissions,[pid]:sub}});
+}
 async function saveQuestionRemote(q){if(!roomCode)return;await dbPatch(`games/${roomCode}`,{question:q});}
-async function saveVotes(vid,v){if(!roomCode)return;await dbPatch(`games/${roomCode}/votes`,{[vid]:v});}
-async function savePlayerToGame(p){if(!roomCode)return;try{const data=await dbGet(`games/${roomCode}`);const ap=data.activePlayers||[];if(!ap.find(x=>x.id===p.id)){ap.push({id:p.id,name:p.name});await dbPatch(`games/${roomCode}`,{activePlayers:ap});activePlayers=ap.map(rp=>{const l=roster.find(m=>m.id===rp.id||m.name===rp.name);return l?{...rp,photo:l.photo}:{...rp};});}}catch{}}
+async function saveVotes(vid,v){
+  if(!roomCode)return;
+  await dbPatch(`games/${roomCode}`,{votes:{...votes,[vid]:v}});
+}
+async function savePlayerToGame(p){
+  if(!roomCode)return;
+  try{
+    if(!activePlayers.find(x=>x.id===p.id)){
+      activePlayers=[...activePlayers,{id:p.id,name:p.name}];
+    }
+    const ap=activePlayers.map(({id,name})=>({id,name}));
+    await dbPatch(`games/${roomCode}`,{activePlayers:ap});
+  }catch(e){console.warn('savePlayerToGame failed',e);}
+}
 async function loadSharedRoster(){
   if(USE_CLAUDE_STORAGE)return; // local only in sandbox
   try{const data=await dbGet('roster');if(data){Object.values(data).forEach(rm=>{const l=roster.find(m=>m.id===rm.id);if(!l)roster.push({...rm});else if(rm.photo&&!l.photo)l.photo=rm.photo;});saveRoster();}}catch{}
@@ -638,12 +659,23 @@ function selNone(){selIds=[];renderCreate();}
 function proceedToQuestion(){
   activePlayers=roster.filter(m=>selIds.includes(m.id));
   if(activePlayers.length<2){showToast('Select at least 2 players');return;}
-
+  // Generate code early so it can be shared before question is picked
+  roomCode=genCode();
+  submissions={};votes={};
   showScreen('screen-pick-q');
 }
 
 // ── QUESTION PICKER ────────────────────────────────────────────────────────
-function renderQPicker(){document.getElementById('custom-q-input').value='';shuffleQList();}
+function renderQPicker(){
+  document.getElementById('custom-q-input').value='';
+  const codeEl=document.getElementById('pick-q-code');
+  if(codeEl)codeEl.textContent=roomCode||'';
+  shuffleQList();
+}
+function copyPickCode(){
+  if(!roomCode)return;
+  navigator.clipboard.writeText(roomCode).then(()=>showToast('Code copied: '+roomCode)).catch(()=>showToast(roomCode));
+}
 function shuffleQList(){
   const sh=shuffle([...Array(QUESTIONS.length).keys()]).slice(0,8);
   const list=document.getElementById('q-option-list');list.innerHTML='';
@@ -652,7 +684,7 @@ function shuffleQList(){
 function useCustomQuestion(){const q=document.getElementById('custom-q-input').value.trim();if(!q){showToast('Type a question first');return;}useQuestion(q);}
 
 async function useQuestion(q){
-  question=q;roomCode=genCode();submissions={};votes={};
+  question=q;submissions={};votes={};
   showLoading('Setting up game…');
   try{
     const p=activePlayers.map(({id,name})=>({id,name}));
