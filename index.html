@@ -280,7 +280,7 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
         <div id="share-url" style="flex:1;padding:10px 12px;background:var(--gxl);border:1px solid var(--str);font-size:13px;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
         <button class="btn btn-r btn-sm" onclick="copyShareUrl()">Copy</button>
       </div>
-      <p class="xs">Or code: <strong id="code-inline" style="letter-spacing:.1em;cursor:pointer;" onclick="copyCode()"></strong> (tap to copy)</p>
+      <p class="xs">Or share code: <strong id="code-inline" style="letter-spacing:.1em;cursor:pointer;" onclick="copyCode()"></strong> (tap to copy) &nbsp;·&nbsp; Tap <strong>↻ Tap to refresh</strong> below to see new submissions</p>
     </div>
     <div class="card mb4">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
@@ -305,7 +305,7 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
     </div>
     <button class="btn btn-r btn-bl" id="guess-btn" onclick="handleGuessClick()" disabled>Start guessing</button>
     <p id="missing-note" class="sm tc mt3" style="display:none;"></p>
-    <div class="tc mt4"><button class="pill" onclick="manualRefresh()"><span id="refresh-icon">↻</span> Refresh submissions</button></div>
+    <div class="tc mt4"><button class="btn btn-w" onclick="manualRefresh()"><span id="refresh-icon">↻</span> Tap to refresh</button><p class="xs mt3">Tap to check for new submissions</p></div>
   </div>
 </div>
 
@@ -495,17 +495,26 @@ function startSSE(code){
       finally{pollActive=false;}
     },2500);
   } else {
-    // Firebase — poll every 4s, not SSE, to avoid 423 rate limiting
+    // Firebase — poll every 8s to stay well under rate limits
+    // The manual refresh button handles impatient users
+    let backoffTicks=0;
     pollTimer=setInterval(async()=>{
       if(pollActive)return;
+      if(backoffTicks>0){backoffTicks--;return;} // skip ticks during backoff
       pollActive=true;
-      try{const d=await fbGet(`games/${code}`);if(d)onRemoteUpdate(d);}
+      try{
+        const d=await fbGet(`games/${code}`);
+        if(d)onRemoteUpdate(d);
+        backoffTicks=0; // reset on success
+      }
       catch(e){
-        // 429/423 = back off for this tick, don't crash
-        if(e.message?.includes('429')||e.message?.includes('423'))console.warn('Firebase rate limit — skipping tick');
+        if(e.message?.includes('429')||e.message?.includes('423')){
+          backoffTicks=5; // wait 5 extra ticks (~40s) before retrying
+          console.warn('Firebase rate limited — backing off');
+        }
       }
       finally{pollActive=false;}
-    },4000);
+    },8000);
   }
 }
 function stopSSE(){if(sseSource){sseSource.close();sseSource=null;}}
