@@ -144,25 +144,11 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
   </div>
 </div>
 
-<!-- FIREBASE SETUP -->
+<!-- FIREBASE SETUP (no longer used — kept as placeholder) -->
 <div id="screen-firebase" class="screen">
   <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span></div>
   <div class="red-bar"></div>
-  <div class="page-c">
-    <div style="max-width:520px;width:100%;">
-      <div class="eyebrow">One-time setup</div>
-      <h2 class="h2 mt2 mb4">Connect real-time sync</h2>
-      <p class="body mb5">Firebase is free and takes 3 minutes.</p>
-      <div class="card mb5">
-        <div class="stp"><div class="snum">1</div><div><strong class="block mb2">Create a free Firebase project</strong><span class="sm">Go to <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> → Add project → any name → disable Analytics → Create</span></div></div>
-        <div class="stp"><div class="snum">2</div><div><strong class="block mb2">Add a Realtime Database</strong><span class="sm">Left menu → Build → Realtime Database → Create Database → any region → Start in test mode</span></div></div>
-        <div class="stp"><div class="snum">3</div><div><strong class="block mb2">Fix the database rules</strong><span class="sm">Click the <strong>Rules</strong> tab. Delete everything and paste this, then click <strong>Publish</strong>:</span><code style="display:block;background:var(--gxl);padding:8px;margin-top:8px;font-size:12px;line-height:1.8;">{ "rules": { ".read": true, ".write": true } }</code></div></div>
-        <div class="stp" style="border:none;"><div class="snum">4</div><div style="width:100%;"><strong class="block mb2">Paste your database URL</strong><span class="sm block mb3">Looks like <code style="background:var(--gxl);padding:1px 4px;">https://your-project-default-rtdb.firebaseio.com</code></span><input type="text" class="inp" id="fb-url-input" placeholder="https://your-project-default-rtdb.firebaseio.com" onkeydown="if(event.key==='Enter')saveFirebaseUrl()"></div></div>
-      </div>
-      <button class="btn btn-r btn-bl" onclick="saveFirebaseUrl()">Connect &amp; Start Playing</button>
-      <div class="mt4 tc"><button onclick="goHome()" style="background:none;border:none;color:var(--tr);font-size:13px;cursor:pointer;text-decoration:underline;">Skip — use pre-configured database</button></div>
-    </div>
-  </div>
+  <div class="page-c"><div style="max-width:480px;width:100%;"><div class="eyebrow">Settings</div><h2 class="h2 mt2 mb4">Server Status</h2><p class="body mb5">Game sync runs through the Render server — no setup needed.</p><button class="btn btn-r" onclick="goHome()">← Back to Home</button></div></div>
 </div>
 
 <!-- HOME -->
@@ -180,7 +166,7 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
         <button class="btn btn-w btn-bl" onclick="showScreen('screen-join')">Join a Game</button>
         <button class="btn btn-g btn-bl" id="home-team-btn" onclick="showScreen('screen-team')">Set Up Your Team</button>
       </div>
-      <div class="tc"><button onclick="showScreen('screen-firebase')" style="background:none;border:none;color:var(--tr);font-size:13px;cursor:pointer;text-decoration:underline;" id="fb-status-btn">Firebase settings</button></div>
+      <div class="tc" id="server-status" style="font-size:13px;color:var(--tr);"></div>
     </div>
   </div>
 </div>
@@ -405,7 +391,7 @@ const GRADS=[['#CC0000','#9D1B22'],['#333333','#121212'],['#990000','#660000'],[
 
 // ── STATE ──────────────────────────────────────────────────────────────────
 let roster=[],selIds=[],roomCode=null,question='',activePlayers=[],submissions={},cards=[],selectedPlayer=null;
-let firebaseUrl='',sseSource=null,pollTimer=null;
+let sseSource=null,pollTimer=null,firebaseUrl='';
 let editMemberId=null,modalPhoto=null,confirmCb=null,regPhoto=null;
 let votes={},myVotes={},votingPlayerId=null,selectedChipId=null;
 
@@ -414,113 +400,59 @@ function ls(k,v){if(v===undefined){try{const r=localStorage.getItem(k);return r?
 function loadRoster(){roster=ls('gtt-roster')||[];}
 function saveRoster(){ls('gtt-roster',roster);}
 
-// ── STORAGE ABSTRACTION ─────────────────────────────────────────────────────
-// Auto-detects Claude sandbox (window.storage) vs Firebase REST API.
-// All game reads/writes go through dbGet / dbPut / dbPatch.
+// ── BACKEND ──────────────────────────────────────────────────────────────────
+// Routes to Claude sandbox storage, or the Render server (gtt-proxy).
+// No Firebase — avoids rate limiting entirely.
 
+const SERVER = 'https://gtt-proxy-1i9y.onrender.com';
 const USE_CLAUDE_STORAGE = typeof window.storage !== 'undefined';
 
-// Claude sandbox storage helpers
-async function csGet(key){
-  try{const r=await window.storage.get(key,true);return r?JSON.parse(r.value):null;}catch{return null;}
-}
-async function csPut(key,val){
-  try{await window.storage.set(key,JSON.stringify(val),true);}catch(e){console.error('cs put',e);}
-}
-async function csPatch(key,patch){
-  const current=await csGet(key)||{};
-  const merged=deepMerge(current,patch);
-  await csPut(key,merged);
-  return merged;
-}
-function deepMerge(target,source){
-  const out={...target};
-  for(const k of Object.keys(source)){
-    if(source[k]&&typeof source[k]==='object'&&!Array.isArray(source[k])&&target[k]&&typeof target[k]==='object'){
-      out[k]=deepMerge(target[k],source[k]);
-    } else {
-      out[k]=source[k];
-    }
-  }
-  return out;
-}
+// ── Claude sandbox storage ────────────────────────────────────────────────────
+async function csGet(key){try{const r=await window.storage.get(key,true);return r?JSON.parse(r.value):null;}catch{return null;}}
+async function csPut(key,val){try{await window.storage.set(key,JSON.stringify(val),true);}catch(e){console.error('cs put',e);}}
+async function csPatch(key,patch){const cur=await csGet(key)||{};await csPut(key,deepMerge(cur,patch));}
+function deepMerge(t,s){const o={...t};for(const k of Object.keys(s)){if(s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k])&&t[k]&&typeof t[k]==='object'){o[k]=deepMerge(t[k],s[k]);}else{o[k]=s[k];}}return o;}
 
-// Firebase REST helpers
-function fbUrl(p){return`${firebaseUrl}/${p}.json`;}
-async function fbGet(p){
-  const r=await fetch(fbUrl(p));
-  if(!r.ok)throw new Error('FB GET '+r.status);
+// ── Render server calls ───────────────────────────────────────────────────────
+async function serverGet(path){
+  const r=await fetch(`${SERVER}/${path}`);
+  if(r.status===404)return null;
+  if(!r.ok)throw new Error('GET '+r.status);
   return r.json();
 }
-async function fbPut(p,d){
-  const r=await fetch(fbUrl(p),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
-  if(!r.ok){const t=await r.text().catch(()=>'');throw new Error('FB PUT '+r.status+' '+t.slice(0,120));}
+async function serverPut(path,data){
+  const r=await fetch(`${SERVER}/${path}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  if(!r.ok)throw new Error('PUT '+r.status);
   return r.json();
 }
-async function fbPatch(p,d){
-  const r=await fetch(fbUrl(p),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
-  if(!r.ok){const t=await r.text().catch(()=>'');throw new Error('FB PATCH '+r.status+' '+t.slice(0,120));}
+async function serverPatch(path,data){
+  const r=await fetch(`${SERVER}/${path}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  if(!r.ok)throw new Error('PATCH '+r.status);
   return r.json();
 }
 
-// Unified API — routes to Claude storage or Firebase
-async function dbGet(path){
-  if(USE_CLAUDE_STORAGE) return csGet('gtt:'+path);
-  return fbGet(path);
-}
-async function dbPut(path,data){
-  if(USE_CLAUDE_STORAGE) return csPut('gtt:'+path,data);
-  return fbPut(path,data);
-}
-async function dbPatch(path,data){
-  if(USE_CLAUDE_STORAGE) return csPatch('gtt:'+path,data);
-  return fbPatch(path,data);
-}
+// ── Unified DB API ────────────────────────────────────────────────────────────
+async function dbGet(path){if(USE_CLAUDE_STORAGE)return csGet('gtt:'+path);return serverGet(path);}
+async function dbPut(path,data){if(USE_CLAUDE_STORAGE)return csPut('gtt:'+path,data);return serverPut(path,data);}
+async function dbPatch(path,data){if(USE_CLAUDE_STORAGE)return csPatch('gtt:'+path,data);return serverPatch(path,data);}
 
-// ── SYNC ─────────────────────────────────────────────────────────────────
-// Single polling interval — no SSE (avoids Firebase 423 rate limit from
-// simultaneous persistent connections). Polls every 4s which is frequent
-// enough for a team game without triggering rate limits.
+// ── Polling ───────────────────────────────────────────────────────────────────
 let pollActive=false;
-
 function startSSE(code){
-  // Named startSSE for compatibility but uses polling only — SSE caused 423s
   stopAll();
-  if(USE_CLAUDE_STORAGE){
-    pollTimer=setInterval(async()=>{
-      if(pollActive)return; // prevent overlapping requests
-      pollActive=true;
-      try{const d=await dbGet(`games/${code}`);if(d)onRemoteUpdate(d);}
-      catch{}
-      finally{pollActive=false;}
-    },2500);
-  } else {
-    // Firebase — poll every 8s to stay well under rate limits
-    // The manual refresh button handles impatient users
-    let backoffTicks=0;
-    pollTimer=setInterval(async()=>{
-      if(pollActive)return;
-      if(backoffTicks>0){backoffTicks--;return;} // skip ticks during backoff
-      pollActive=true;
-      try{
-        const d=await fbGet(`games/${code}`);
-        if(d)onRemoteUpdate(d);
-        backoffTicks=0; // reset on success
-      }
-      catch(e){
-        if(e.message?.includes('429')||e.message?.includes('423')){
-          backoffTicks=5; // wait 5 extra ticks (~40s) before retrying
-          console.warn('Firebase rate limited — backing off');
-        }
-      }
-      finally{pollActive=false;}
-    },8000);
-  }
+  const interval=USE_CLAUDE_STORAGE?2500:5000;
+  pollTimer=setInterval(async()=>{
+    if(pollActive)return;
+    pollActive=true;
+    try{const d=await dbGet(`games/${code}`);if(d)onRemoteUpdate(d);}
+    catch{}
+    finally{pollActive=false;}
+  },interval);
 }
-function stopSSE(){if(sseSource){sseSource.close();sseSource=null;}}
-function startPolling(code){startSSE(code);} // alias
+function stopSSE(){}
+function startPolling(code){startSSE(code);}
 function stopPolling(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;pollActive=false;}}
-function stopAll(){stopSSE();stopPolling();}
+function stopAll(){stopPolling();}
 
 function onRemoteUpdate(data){
   if(!data)return;
@@ -537,21 +469,17 @@ async function saveSubmission(pid,sub){if(!firebaseUrl||!roomCode)return;await d
 async function saveQuestionRemote(q){if(!firebaseUrl||!roomCode)return;await dbPatch(`games/${roomCode}`,{question:q});}
 async function saveVotes(vid,v){if(!firebaseUrl||!roomCode)return;await dbPatch(`games/${roomCode}/votes`,{[vid]:v});}
 async function savePlayerToGame(p){if(!firebaseUrl||!roomCode)return;try{const data=await dbGet(`games/${roomCode}`);const ap=data.activePlayers||[];if(!ap.find(x=>x.id===p.id)){ap.push({id:p.id,name:p.name});await dbPatch(`games/${roomCode}`,{activePlayers:ap});activePlayers=ap.map(rp=>{const l=roster.find(m=>m.id===rp.id||m.name===rp.name);return l?{...rp,photo:l.photo}:{...rp};});}}catch{}}
-async function loadSharedRoster(){if(!firebaseUrl)return;try{const data=await dbGet('roster');if(data){Object.values(data).forEach(rm=>{const l=roster.find(m=>m.id===rm.id);if(!l)roster.push({...rm});else if(rm.photo&&!l.photo)l.photo=rm.photo;});saveRoster();}}catch{}}
-async function savePersonToSharedRoster(m){if(!firebaseUrl)return;try{await dbPatch('roster',{[m.id]:{id:m.id,name:m.name}});}catch{}}
+async function loadSharedRoster(){
+  if(USE_CLAUDE_STORAGE)return; // local only in sandbox
+  try{const data=await dbGet('roster');if(data){Object.values(data).forEach(rm=>{const l=roster.find(m=>m.id===rm.id);if(!l)roster.push({...rm});else if(rm.photo&&!l.photo)l.photo=rm.photo;});saveRoster();}}catch{}
+}
+async function savePersonToSharedRoster(m){
+  if(USE_CLAUDE_STORAGE)return;
+  try{await dbPatch('roster',{[m.id]:{id:m.id,name:m.name}});}catch{}
+}
 
 // ── FIREBASE SETUP ─────────────────────────────────────────────────────────
-function saveFirebaseUrl(){
-  let url=document.getElementById('fb-url-input').value.trim().replace(/\/+$/,'');
-  if(!url)url=PREFILLED_FIREBASE;
-  if(!url.startsWith('https://')){showToast('URL should start with https://');return;}
-  localStorage.setItem('gtt-firebase',url);
-  firebaseUrl=url;
-  updateFbBtn();
-  showToast('Firebase connected');
-  goHome();
-}
-function updateFbBtn(){const b=document.getElementById('fb-status-btn');if(!b)return;b.textContent=firebaseUrl?'Firebase ✓':'Firebase settings';b.style.color=firebaseUrl?'var(--suc)':'var(--tr)';}
+function updateFbBtn(){}
 
 // ── SCREENS ────────────────────────────────────────────────────────────────
 function showScreen(id){
@@ -637,7 +565,7 @@ function selNone(){selIds=[];renderCreate();}
 function proceedToQuestion(){
   activePlayers=roster.filter(m=>selIds.includes(m.id));
   if(activePlayers.length<2){showToast('Select at least 2 players');return;}
-  if(!USE_CLAUDE_STORAGE&&!firebaseUrl){showToast('Connect Firebase first');showScreen('screen-firebase');return;}
+
   showScreen('screen-pick-q');
 }
 
@@ -663,8 +591,7 @@ async function useQuestion(q){
   }catch(e){
     console.error('useQuestion error:',e);
     let msg=e.message||'Unknown error';
-    if(msg.includes('403')||msg.includes('401'))msg='Firebase rules are blocking writes. Go to Firebase Console → Realtime Database → Rules and make sure .read and .write are both set to true, then click Publish.';
-    else if(msg.includes('Failed to fetch')||msg.includes('NetworkError')||msg.includes('fetch'))msg='Could not reach Firebase. Check that your database URL is correct and your Firebase rules allow reads and writes (set both to true in the Rules tab).';
+    if(msg.includes('Failed to fetch')||msg.includes('NetworkError')||msg.includes('fetch'))msg='Could not reach the game server. Check your internet connection and try again.';
     showToast(msg);
   }
   finally{hideLoading();}
@@ -679,7 +606,7 @@ function copyCode(){navigator.clipboard.writeText(roomCode).then(()=>showToast('
 async function joinRoom(codeOverride){
   const code=(codeOverride||document.getElementById('join-code').value.trim().toUpperCase()).replace(/[^A-Z0-9]/g,'');
   if(!code||code.length<5){showToast('Enter a valid room code');return;}
-  if(!USE_CLAUDE_STORAGE&&!firebaseUrl){showToast('Connect Firebase first');showScreen('screen-firebase');return;}
+
   showLoading('Joining game…');
   try{
     const data=await dbGet(`games/${code}`);
@@ -692,9 +619,7 @@ async function joinRoom(codeOverride){
     showRegisterScreen();
   }catch(e){
     let msg=e.message||'Unknown error';
-    if(msg.includes('423')||msg.includes('429'))msg='Firebase is rate limiting requests — wait a few seconds and try again.';
-    else if(msg.includes('403')||msg.includes('401'))msg='Firebase access denied — check your database rules are set to allow read and write.';
-    else if(msg.includes('404'))msg='Room not found — check the code and try again.';
+    if(msg.includes('404'))msg='Room not found — check the code and try again.';
     showToast('Could not join: '+msg);
   }
   finally{hideLoading();}
@@ -1208,22 +1133,21 @@ function routeFromUrl(){
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────
-const PREFILLED_FIREBASE=''; // Paste your new US-region Firebase URL here e.g. https://your-project-default-rtdb.firebaseio.com
 loadRoster();
-// Only set Firebase URL if we have a valid one
-const savedFb = localStorage.getItem('gtt-firebase') || PREFILLED_FIREBASE;
-if(savedFb) {
-  localStorage.setItem('gtt-firebase', savedFb);
-  firebaseUrl = savedFb;
-  document.getElementById('fb-url-input').value = savedFb;
-}
-updateFbBtn();
 renderHome();
-if(!USE_CLAUDE_STORAGE){
-  routeFromUrl();
-  if(!firebaseUrl) showScreen('screen-firebase');
-}
-console.log('Storage mode:', USE_CLAUDE_STORAGE ? 'Claude sandbox (window.storage)' : 'Firebase REST');
+// Show server status on home screen
+(async()=>{
+  const el=document.getElementById('server-status');
+  if(!el)return;
+  if(USE_CLAUDE_STORAGE){el.textContent='Running in Claude sandbox';return;}
+  try{
+    const r=await fetch(SERVER+'/health');
+    el.textContent=r.ok?'✓ Server connected':'⚠ Server not responding';
+    el.style.color=r.ok?'var(--suc)':'var(--red)';
+  }catch{el.textContent='⚠ Could not reach server';el.style.color='var(--red)';}
+})();
+if(!USE_CLAUDE_STORAGE)routeFromUrl();
+console.log('Mode:', USE_CLAUDE_STORAGE?'Claude sandbox':'Render server');
 </script>
 </body>
 </html>
