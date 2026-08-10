@@ -391,7 +391,7 @@ const GRADS=[['#CC0000','#9D1B22'],['#333333','#121212'],['#990000','#660000'],[
 
 // ── STATE ──────────────────────────────────────────────────────────────────
 let roster=[],selIds=[],roomCode=null,question='',activePlayers=[],submissions={},cards=[],selectedPlayer=null;
-let sseSource=null,pollTimer=null,firebaseUrl='';
+let sseSource=null,pollTimer=null;
 let editMemberId=null,modalPhoto=null,confirmCb=null,regPhoto=null;
 let votes={},myVotes={},votingPlayerId=null,selectedChipId=null;
 
@@ -465,10 +465,10 @@ function onRemoteUpdate(data){
   if(document.getElementById('screen-vote-waiting').classList.contains('active'))renderVoteWaiting();
 }
 
-async function saveSubmission(pid,sub){if(!firebaseUrl||!roomCode)return;await dbPatch(`games/${roomCode}/submissions`,{[pid]:sub});}
-async function saveQuestionRemote(q){if(!firebaseUrl||!roomCode)return;await dbPatch(`games/${roomCode}`,{question:q});}
-async function saveVotes(vid,v){if(!firebaseUrl||!roomCode)return;await dbPatch(`games/${roomCode}/votes`,{[vid]:v});}
-async function savePlayerToGame(p){if(!firebaseUrl||!roomCode)return;try{const data=await dbGet(`games/${roomCode}`);const ap=data.activePlayers||[];if(!ap.find(x=>x.id===p.id)){ap.push({id:p.id,name:p.name});await dbPatch(`games/${roomCode}`,{activePlayers:ap});activePlayers=ap.map(rp=>{const l=roster.find(m=>m.id===rp.id||m.name===rp.name);return l?{...rp,photo:l.photo}:{...rp};});}}catch{}}
+async function saveSubmission(pid,sub){if(!roomCode)return;await dbPatch(`games/${roomCode}/submissions`,{[pid]:sub});}
+async function saveQuestionRemote(q){if(!roomCode)return;await dbPatch(`games/${roomCode}`,{question:q});}
+async function saveVotes(vid,v){if(!roomCode)return;await dbPatch(`games/${roomCode}/votes`,{[vid]:v});}
+async function savePlayerToGame(p){if(!roomCode)return;try{const data=await dbGet(`games/${roomCode}`);const ap=data.activePlayers||[];if(!ap.find(x=>x.id===p.id)){ap.push({id:p.id,name:p.name});await dbPatch(`games/${roomCode}`,{activePlayers:ap});activePlayers=ap.map(rp=>{const l=roster.find(m=>m.id===rp.id||m.name===rp.name);return l?{...rp,photo:l.photo}:{...rp};});}}catch{}}
 async function loadSharedRoster(){
   if(USE_CLAUDE_STORAGE)return; // local only in sandbox
   try{const data=await dbGet('roster');if(data){Object.values(data).forEach(rm=>{const l=roster.find(m=>m.id===rm.id);if(!l)roster.push({...rm});else if(rm.photo&&!l.photo)l.photo=rm.photo;});saveRoster();}}catch{}
@@ -708,7 +708,7 @@ function startEditQ(){document.getElementById('q-display').style.display='none';
 function cancelEditQ(){document.getElementById('q-display').style.display='block';document.getElementById('q-edit').style.display='none';}
 async function saveQ(){const q=document.getElementById('q-draft').value.trim();if(!q)return;question=q;document.getElementById('q-display').textContent=q;cancelEditQ();await saveQuestionRemote(q);}
 async function manualRefresh(){
-  if(!firebaseUrl||!roomCode)return;
+  if(!roomCode)return;
   const icon=document.getElementById('refresh-icon');if(icon)icon.style.animation='spin .6s linear';
   try{const data=await dbGet(`games/${roomCode}`);if(data){if(data.question)question=data.question;if(data.submissions)submissions=data.submissions;if(data.activePlayers)activePlayers=data.activePlayers.map(rp=>{const l=roster.find(m=>m.id===rp.id);return l?{...rp,photo:l.photo}:{...rp};});renderWaiting();showToast('Refreshed');}}
   catch{showToast('Could not refresh');}
@@ -1126,7 +1126,7 @@ function confetti(){const cols=['#CC0000','#9D1B22','#333333','#CCCCCC','#F9F9F9
 function routeFromUrl(){
   const params=new URLSearchParams(window.location.search);
   const gameCode=params.get('game');
-  if(gameCode&&firebaseUrl){
+  if(gameCode){
     window.history.replaceState({},'',window.location.pathname);
     joinRoom(gameCode);
   }
