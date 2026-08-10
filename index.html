@@ -153,7 +153,7 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
 
 <!-- HOME -->
 <div id="screen-home" class="screen active">
-  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><span style="font-size:11px;color:var(--tr);font-weight:700;letter-spacing:.05em;">v1.16</span></div>
+  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><span style="font-size:11px;color:var(--tr);font-weight:700;letter-spacing:.05em;">v1.17</span></div>
   <div class="red-bar"></div>
   <div class="page-c">
     <div style="max-width:480px;width:100%;">
@@ -262,16 +262,23 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
 
 <!-- WAITING -->
 <div id="screen-waiting" class="screen">
-  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><div class="tr"><div id="waiting-tr" style="display:flex;align-items:center;gap:8px;"></div><button class="pill" onclick="goHome()">⌂ Home</button></div></div>
+  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><div class="tr"><span id="topbar-code-waiting" onclick="copyCode()" style="font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--red);cursor:pointer;padding:4px 10px;background:var(--errl);border:1px solid var(--red);" title="Tap to copy room code"></span><div id="waiting-tr" style="display:flex;align-items:center;gap:8px;"></div><button class="pill" onclick="goHome()">⌂ Home</button></div></div>
   <div class="red-bar"></div>
   <div class="pw-md">
-    <div class="mt6 mb5 tc">
-      <p class="sm mb3">Share this link — teammates click to join automatically</p>
-      <div style="display:flex;gap:8px;align-items:center;max-width:480px;margin:0 auto 8px;">
-        <div id="share-url" style="flex:1;padding:10px 12px;background:var(--gxl);border:1px solid var(--str);font-size:13px;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
-        <button class="btn btn-r btn-sm" onclick="copyShareUrl()">Copy</button>
+    <div class="mt6 mb4" style="background:var(--gxl);border:1px solid var(--str);border-left:4px solid var(--red);padding:14px 16px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tr);margin-bottom:2px;">Room code</div>
+          <div id="code-inline" onclick="copyCode()" style="font-size:28px;font-weight:700;letter-spacing:.14em;color:var(--black);cursor:pointer;" title="Tap to copy"></div>
+        </div>
+        <div style="flex:1;min-width:200px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tr);margin-bottom:4px;">Share link</div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div id="share-url" style="flex:1;padding:8px 10px;background:var(--white);border:1px solid var(--str);font-size:12px;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+            <button class="btn btn-r btn-sm" onclick="copyShareUrl()">Copy</button>
+          </div>
+        </div>
       </div>
-      <p class="xs">Or share code: <strong id="code-inline" style="letter-spacing:.1em;cursor:pointer;" onclick="copyCode()"></strong> (tap to copy) &nbsp;·&nbsp; Tap <strong>↻ Tap to refresh</strong> below to see new submissions</p>
     </div>
     <div class="card mb4">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
@@ -302,7 +309,7 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
 
 <!-- SUBMIT -->
 <div id="screen-submit" class="screen">
-  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><div class="tr"><span class="sm" id="submit-pname"></span><div id="submit-pav"></div><button class="pill" onclick="goHome()">⌂ Home</button></div></div>
+  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><div class="tr"><span id="topbar-code-submit" onclick="copyCode()" style="font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--red);cursor:pointer;padding:4px 10px;background:var(--errl);border:1px solid var(--red);" title="Tap to copy room code"></span><span class="sm" id="submit-pname"></span><div id="submit-pav"></div><button class="pill" onclick="goHome()">⌂ Home</button></div></div>
   <div class="red-bar"></div>
   <div class="pw-sm">
     <div class="eyebrow mt6">Your turn</div>
@@ -322,7 +329,7 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
 
 <!-- GUESSING -->
 <div id="screen-guessing" class="screen">
-  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><div class="tr"><button class="btn btn-w btn-sm" onclick="revealAll()">Reveal all</button><button class="btn btn-r btn-sm" onclick="goToVote()">Vote →</button><button class="pill" onclick="goHome()">⌂ Home</button></div></div>
+  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><div class="tr"><span id="topbar-code-guessing" onclick="copyCode()" style="font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--red);cursor:pointer;padding:4px 10px;background:var(--errl);border:1px solid var(--red);" title="Tap to copy room code"></span><button class="btn btn-w btn-sm" onclick="revealAll()">Reveal all</button><button class="btn btn-r btn-sm" onclick="goToVote()">Vote →</button><button class="pill" onclick="goHome()">⌂ Home</button></div></div>
   <div class="red-bar"></div>
   <div class="pw">
     <div class="eyebrow mt6">Guessing round</div>
@@ -799,6 +806,11 @@ function renderWaiting(){
   if(roomCode){
     document.getElementById('share-url').textContent=buildShareUrl(roomCode);
     document.getElementById('code-inline').textContent=roomCode;
+    // Update topbar code badges on all screens
+    ['waiting','submit','guessing'].forEach(s=>{
+      const el=document.getElementById('topbar-code-'+s);
+      if(el)el.textContent=roomCode;
+    });
   }
   // topbar
   const wtr=document.getElementById('waiting-tr');wtr.innerHTML='';
@@ -832,8 +844,7 @@ function renderWaiting(){
       const txt=document.createElement('div');txt.style.flex='1';
       const nm=document.createElement('div');nm.style.cssText='font-weight:700;font-size:15px;color:var(--td);';nm.textContent=selectedPlayer.name;txt.appendChild(nm);
       const st=document.createElement('div');st.style.cssText='font-size:13px;color:var(--suc);font-weight:700;margin-top:2px;';st.textContent='✓ Answer submitted';txt.appendChild(st);
-      const ans=document.createElement('div');ans.style.cssText='font-size:13px;color:var(--tr);margin-top:2px;font-style:italic;';
-      ans.textContent='"'+(submissions[selectedPlayer.id]?.answer||'')+'"';txt.appendChild(ans);
+      // Don't show the answer in lobby — keeps it secret until guessing round
       done.appendChild(txt);
       const edit=document.createElement('button');edit.className='pill';edit.style.cssText='flex-shrink:0;';edit.textContent='Edit';edit.onclick=()=>openSubmit(selectedPlayer);
       done.appendChild(edit);
