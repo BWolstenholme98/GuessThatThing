@@ -452,20 +452,37 @@ function saveGameSnapshot(){
 
 // Rebuild the game on the server using the local snapshot
 async function rebuildGameOnServer(){
-  const snap=ls('gtt-snapshot');
-  if(!snap||snap.roomCode!==roomCode){
-    // No snapshot — use current in-memory state
-    const p=activePlayers.map(({id,name})=>({id,name}));
-    await serverPut(`games/${roomCode}`,{question,activePlayers:p,submissions,votes,createdAt:Date.now()});
-    return;
-  }
-  await serverPut(`games/${snap.roomCode}`,{
-    question: snap.question,
-    activePlayers: snap.activePlayers,
-    submissions: snap.submissions||{},
-    votes: snap.votes||{},
-    createdAt: Date.now(),
+  console.log('Rebuilding game on server, roomCode=', roomCode);
+  // Strip photos from submissions (too large for server memory)
+  const safeSubmissions={};
+  Object.entries(submissions).forEach(([pid,sub])=>{
+    safeSubmissions[pid]={
+      answer:sub.answer,
+      emojiArt:sub.emojiArt,
+      // Store cover url only if it's a remote URL (not a data: URI which is huge)
+      cover: sub.cover?.url?.startsWith('data:') ? {type:'svg'} : sub.cover,
+    };
   });
+  const p=activePlayers.map(({id,name})=>({id,name}));
+  const gameData={
+    question,
+    activePlayers:p,
+    submissions:safeSubmissions,
+    votes,
+    createdAt:Date.now(),
+  };
+  console.log('Rebuilding with data size:', JSON.stringify(gameData).length, 'chars');
+  const r=await fetch(`${SERVER}/games/${roomCode}`,{
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(gameData),
+  });
+  if(!r.ok){
+    const t=await r.text().catch(()=>'');
+    console.error('Rebuild PUT failed:', r.status, t.slice(0,200));
+    throw new Error('Rebuild failed: '+r.status);
+  }
+  console.log('Rebuild succeeded');
 }
 
 // ── Unified DB API ────────────────────────────────────────────────────────────
@@ -495,7 +512,26 @@ function onRemoteUpdate(data){
   if(!data)return;
   const changed=JSON.stringify(data.submissions)!==JSON.stringify(submissions);
   if(data.question&&data.question!==question){question=data.question;const el=document.getElementById('q-display');if(el)el.textContent=question;}
-  if(data.submissions)submissions=data.submissions;
+  if(data.submissions){
+    // Restore canvas images for any submission that only has svg cover
+    const merged={...submissions};
+    Object.entries(data.submissions).forEach(([pid,sub])=>{
+      const existing=submissions[pid];
+      if(existing?.cover?.url?.startsWith('data:')){
+        // Keep local canvas version
+        merged[pid]={...sub,cover:existing.cover};
+      } else {
+        merged[pid]=sub;
+        // Regenerate canvas if cover is just svg
+        if(!sub.cover||sub.cover.type==='svg'){
+          generateCanvasImage(sub.answer).then(cover=>{
+            if(submissions[pid])submissions[pid].cover=cover;
+          });
+        }
+      }
+    });
+    submissions=merged;
+  }
   if(data.activePlayers)activePlayers=data.activePlayers.map(rp=>{const l=roster.find(m=>m.id===rp.id||m.name===rp.name);return l?{...rp,photo:l.photo}:{...rp};});
   if(data.votes)votes=data.votes;
   if(changed&&document.getElementById('screen-waiting').classList.contains('active'))renderWaiting();
@@ -779,9 +815,12 @@ async function submitAnswer(){
     const emoji=localEmojiArt(ans);
     const[cover,coverArt]=await Promise.all([generateCanvasImage(ans),fetchCover(ans)]);
     const finalCover=(coverArt&&coverArt.type==='image')?coverArt:cover;
-    const sub={answer:ans,emojiArt:emoji,cover:finalCover};
+    // Strip data URIs before saving to server (too large — regenerate client-side)
+    const serverCover=finalCover?.url?.startsWith('data:') ? {type:'svg'} : finalCover;
+    const sub={answer:ans,emojiArt:emoji,cover:finalCover};        // full version for local display
+    const serverSub={answer:ans,emojiArt:emoji,cover:serverCover}; // lean version for server
     submissions[selectedPlayer.id]=sub;
-    await saveSubmission(selectedPlayer.id,sub);
+    await saveSubmission(selectedPlayer.id,serverSub);
     saveGameSnapshot();
     document.getElementById('submit-form').style.display='none';
     document.getElementById('submit-done').style.display='block';
