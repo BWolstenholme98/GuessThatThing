@@ -153,7 +153,7 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
 
 <!-- HOME -->
 <div id="screen-home" class="screen active">
-  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><span style="font-size:11px;color:var(--tr);font-weight:700;letter-spacing:.05em;">v1.17</span></div>
+  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><span style="font-size:11px;color:var(--tr);font-weight:700;letter-spacing:.05em;">v1.18</span></div>
   <div class="red-bar"></div>
   <div class="page-c">
     <div style="max-width:480px;width:100%;">
@@ -183,25 +183,11 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
   </div>
 </div>
 
-<!-- CREATE -->
-<div id="screen-create" class="screen">
-  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><div class="tr"><button class="pill" onclick="goHome()">⌂ Home</button></div></div>
-  <div class="red-bar"></div>
-  <div class="pw-sm">
-    <div class="eyebrow mt6">New game</div>
-    <h2 class="h3 mt2 mb4">Who's playing today?</h2>
-    <div id="create-empty" style="display:none;" class="card mb5"><p class="body mb4">Add your team first.</p><button class="btn btn-r" onclick="showScreen('screen-team')">Set up team</button></div>
-    <div id="create-controls" style="display:none;">
-      <div style="display:flex;gap:8px;margin-bottom:14px;"><button class="pill" onclick="selAll()">Select all</button><button class="pill" onclick="selNone()">Clear</button><button class="pill" onclick="showScreen('screen-team')">Edit team</button></div>
-      <div id="create-grid" class="pg mb5"></div>
-      <button class="btn btn-r btn-bl" id="create-btn" onclick="proceedToQuestion()" disabled>Select at least 2 players</button>
-    </div>
-  </div>
-</div>
+<!-- CREATE — just go straight to question picker, no player selection -->
 
 <!-- PICK QUESTION -->
 <div id="screen-pick-q" class="screen">
-  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><div class="tr"><button class="pill" onclick="goHome()">⌂ Home</button><button class="pill" onclick="showScreen('screen-create')">← Back</button></div></div>
+  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><div class="tr"><button class="pill" onclick="goHome()">⌂ Home</button><button class="pill" onclick="goHome()">← Home</button></div></div>
   <div class="red-bar"></div>
   <div class="pw-sm">
     <div class="eyebrow mt6">Pick a question</div>
@@ -240,8 +226,11 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
   <div class="page-c">
     <div style="max-width:480px;width:100%;">
       <div class="eyebrow">Who are you?</div>
-      <h2 class="h2 mt2 mb4">Pick your name</h2>
-      <p class="body mb5">Tap your tile to continue, or add yourself below.</p>
+      <h2 class="h2 mt2 mb4">Add yourself to the game</h2>
+      <p class="body mb3">Pick your name from the list, or add yourself if you're new.</p>
+      <div id="reg-code-banner" style="display:none;margin-bottom:20px;padding:10px 14px;background:var(--gxl);border-left:4px solid var(--red);font-size:13px;color:var(--tr);">
+        ⏳ Waiting for the host to pick a question…
+      </div>
       <div id="reg-roster-grid" class="pg mb5"></div>
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;"><div style="flex:1;height:1px;background:var(--str);"></div><span class="sm">or add yourself</span><div style="flex:1;height:1px;background:var(--str);"></div></div>
       <div class="card mb4">
@@ -527,8 +516,13 @@ function onRemoteUpdate(data){
   if(data.question&&data.question!==question){
     question=data.question;
     const el=document.getElementById('q-display');if(el)el.textContent=question;
-    // If we were on register screen waiting for question, move to lobby now
-    if(!data.questionPending&&document.getElementById('screen-register').classList.contains('active')&&selectedPlayer){
+  }
+  if(!data.questionPending&&data.question){
+    // Question is now live — hide waiting banner
+    const banner=document.getElementById('reg-code-banner');
+    if(banner)banner.style.display='none';
+    // If player is identified and on register screen, move them to lobby
+    if(document.getElementById('screen-register').classList.contains('active')&&selectedPlayer){
       renderWaiting();showScreen('screen-waiting');
     }
   }
@@ -597,7 +591,6 @@ function showScreen(id){
   window.scrollTo(0,0);
   if(id==='screen-home')renderHome();
   if(id==='screen-team')renderTeam();
-  if(id==='screen-create')renderCreate();
   if(id==='screen-pick-q')renderQPicker();
 }
 function goHome(){showScreen('screen-home');}
@@ -611,7 +604,7 @@ function renderHome(){
   if(roster.length>8){const more=document.createElement('div');more.className='av-init';more.style.cssText='width:40px;height:40px;background:var(--gm);font-size:12px;color:var(--td);margin-left:-10px;border:2px solid white;';more.textContent=`+${roster.length-8}`;prev.appendChild(more);}
   document.getElementById('home-team-btn').textContent=roster.length>0?`Manage team (${roster.length})`:'Set up your team';
 }
-function goToCreate(){selIds=roster.map(m=>m.id);showScreen('screen-create');}
+function goToCreate(){proceedToQuestion();}
 
 // ── TEAM ───────────────────────────────────────────────────────────────────
 function renderTeam(){
@@ -652,34 +645,16 @@ function saveMember(){
   saveRoster();closeMemberModal();renderTeam();renderHome();
 }
 
-// ── CREATE ─────────────────────────────────────────────────────────────────
-function renderCreate(){
-  const grid=document.getElementById('create-grid'),empty=document.getElementById('create-empty'),ctrl=document.getElementById('create-controls');
-  grid.innerHTML='';
-  if(roster.length===0){empty.style.display='block';ctrl.style.display='none';return;}
-  empty.style.display='none';ctrl.style.display='block';
-  roster.forEach(m=>{
-    const tile=document.createElement('button');tile.className='pt'+(selIds.includes(m.id)?' sel':'');
-    if(selIds.includes(m.id)){const t=document.createElement('div');t.className='chk';t.innerHTML='<svg viewBox="0 0 10 10"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" stroke="white"/></svg>';tile.appendChild(t);}
-    tile.appendChild(mkAv(m,48));
-    const lb=document.createElement('span');lb.textContent=m.name;tile.appendChild(lb);
-    tile.onclick=()=>{selIds.includes(m.id)?selIds=selIds.filter(id=>id!==m.id):selIds.push(m.id);renderCreate();};
-    grid.appendChild(tile);
-  });
-  const n=selIds.length,btn=document.getElementById('create-btn');
-  btn.disabled=n<2;btn.textContent=n<2?'Select at least 2 players':`Choose question for ${n} players →`;
-}
-function selAll(){selIds=roster.map(m=>m.id);renderCreate();}
-function selNone(){selIds=[];renderCreate();}
+// ── CREATE (no longer used — going straight to question picker) ──────────────
+function renderCreate(){}
+function selAll(){}
+function selNone(){}
 async function proceedToQuestion(){
-  activePlayers=roster.filter(m=>selIds.includes(m.id));
-  if(activePlayers.length<2){showToast('Select at least 2 players');return;}
-  roomCode=genCode();submissions={};votes={};question='';
+  activePlayers=[];submissions={};votes={};question='';
+  roomCode=genCode();
   showLoading('Creating room…');
   try{
-    // Create game stub on server immediately — joiners can connect before question is picked
-    const p=activePlayers.map(({id,name})=>({id,name}));
-    await dbPut(`games/${roomCode}`,{question:'',activePlayers:p,submissions:{},votes:{},createdAt:Date.now(),questionPending:true});
+    await dbPut(`games/${roomCode}`,{question:'',activePlayers:[],submissions:{},votes:{},createdAt:Date.now(),questionPending:true});
     saveGameSnapshot();
     startSSE(roomCode);
   }catch(e){
@@ -761,6 +736,9 @@ function showRegisterScreen(){
   regPhoto=null;
   document.getElementById('reg-name').value='';
   setAv(document.getElementById('reg-av'),{name:'?',photo:null},56);
+  // Show waiting banner if host hasn't picked question yet
+  const banner=document.getElementById('reg-code-banner');
+  if(banner)banner.style.display=(!question)?'block':'none';
   const grid=document.getElementById('reg-roster-grid');grid.innerHTML='';
   const known=new Map();
   roster.forEach(m=>known.set(m.id,m));
@@ -1133,7 +1111,7 @@ function goToResults(){
   });
   showScreen('screen-results');
 }
-function playAgain(){stopAll();submissions={};cards=[];roomCode=null;question='';selectedPlayer=null;selIds=roster.map(m=>m.id);votes={};myVotes={};votingPlayerId=null;showScreen('screen-create');}
+function playAgain(){stopAll();submissions={};cards=[];roomCode=null;question='';selectedPlayer=null;votes={};myVotes={};votingPlayerId=null;proceedToQuestion();}
 
 // ── CANVAS IMAGE GENERATION ────────────────────────────────────────────────
 const IMG_THEMES=[
