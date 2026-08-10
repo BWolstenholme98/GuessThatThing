@@ -359,6 +359,24 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
   </div>
 </div>
 
+<!-- VOTE WAITING -->
+<div id="screen-vote-waiting" class="screen">
+  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><div class="tr"><button class="btn btn-r btn-sm" onclick="goToResults()">See results →</button><button class="pill" onclick="goHome()">⌂ Home</button></div></div>
+  <div class="red-bar"></div>
+  <div class="pw-md">
+    <div class="eyebrow mt6">Votes in</div>
+    <h2 class="h2 mt2 mb2">Waiting for everyone to vote</h2>
+    <p class="sm mb5">Results will appear automatically once all votes are in. Or skip ahead now.</p>
+    <div class="card mb4">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;"><span class="h4">Votes submitted</span><span class="badge" id="vote-chip">0 / 0</span></div>
+      <div class="prog mb4"><div class="prog-f" id="vote-bar" style="width:0%;"></div></div>
+      <div id="vote-names"></div>
+    </div>
+    <button class="btn btn-r btn-bl" onclick="goToResults()">Skip — see results now →</button>
+    <p class="sm tc mt3" id="vote-missing-note" style="display:none;"></p>
+  </div>
+</div>
+
 <!-- RESULTS -->
 <div id="screen-results" class="screen">
   <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><div class="tr"><button class="pill" onclick="goHome()">⌂ Home</button></div></div>
@@ -459,26 +477,40 @@ async function dbPatch(path,data){
   return fbPatch(path,data);
 }
 
-// Polling (Claude storage) or SSE (Firebase)
+// ── SYNC ─────────────────────────────────────────────────────────────────
+// Single polling interval — no SSE (avoids Firebase 423 rate limit from
+// simultaneous persistent connections). Polls every 4s which is frequent
+// enough for a team game without triggering rate limits.
+let pollActive=false;
+
 function startSSE(code){
+  // Named startSSE for compatibility but uses polling only — SSE caused 423s
   stopAll();
   if(USE_CLAUDE_STORAGE){
-    // Poll Claude shared storage
     pollTimer=setInterval(async()=>{
-      try{const d=await dbGet(`games/${code}`);if(d)onRemoteUpdate(d);}catch{}
-    },2000);
-    return;
+      if(pollActive)return; // prevent overlapping requests
+      pollActive=true;
+      try{const d=await dbGet(`games/${code}`);if(d)onRemoteUpdate(d);}
+      catch{}
+      finally{pollActive=false;}
+    },2500);
+  } else {
+    // Firebase — poll every 4s, not SSE, to avoid 423 rate limiting
+    pollTimer=setInterval(async()=>{
+      if(pollActive)return;
+      pollActive=true;
+      try{const d=await fbGet(`games/${code}`);if(d)onRemoteUpdate(d);}
+      catch(e){
+        // 429/423 = back off for this tick, don't crash
+        if(e.message?.includes('429')||e.message?.includes('423'))console.warn('Firebase rate limit — skipping tick');
+      }
+      finally{pollActive=false;}
+    },4000);
   }
-  try{
-    sseSource=new EventSource(`${firebaseUrl}/games/${code}.json?stream=true`);
-    sseSource.addEventListener('put',e=>{try{const d=JSON.parse(e.data);if(d&&d.data)onRemoteUpdate(d.data);}catch{}});
-    sseSource.addEventListener('patch',e=>{try{const d=JSON.parse(e.data);if(d&&d.data)onRemoteUpdate(d.data);}catch{}});
-    sseSource.onerror=()=>{stopSSE();startPolling(code);};
-  }catch{startPolling(code);}
 }
 function stopSSE(){if(sseSource){sseSource.close();sseSource=null;}}
-function startPolling(code){stopPolling();pollTimer=setInterval(async()=>{try{const d=await dbGet(`games/${code}`);if(d)onRemoteUpdate(d);}catch{}},3000);}
-function stopPolling(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;}}
+function startPolling(code){startSSE(code);} // alias
+function stopPolling(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;pollActive=false;}}
 function stopAll(){stopSSE();stopPolling();}
 
 function onRemoteUpdate(data){
@@ -489,6 +521,7 @@ function onRemoteUpdate(data){
   if(data.activePlayers)activePlayers=data.activePlayers.map(rp=>{const l=roster.find(m=>m.id===rp.id||m.name===rp.name);return l?{...rp,photo:l.photo}:{...rp};});
   if(data.votes)votes=data.votes;
   if(changed&&document.getElementById('screen-waiting').classList.contains('active'))renderWaiting();
+  if(document.getElementById('screen-vote-waiting').classList.contains('active'))renderVoteWaiting();
 }
 
 async function saveSubmission(pid,sub){if(!firebaseUrl||!roomCode)return;await dbPatch(`games/${roomCode}/submissions`,{[pid]:sub});}
@@ -648,7 +681,13 @@ async function joinRoom(codeOverride){
     await loadSharedRoster();
     startSSE(roomCode);
     showRegisterScreen();
-  }catch(e){showToast('Could not join: '+e.message);}
+  }catch(e){
+    let msg=e.message||'Unknown error';
+    if(msg.includes('423')||msg.includes('429'))msg='Firebase is rate limiting requests — wait a few seconds and try again.';
+    else if(msg.includes('403')||msg.includes('401'))msg='Firebase access denied — check your database rules are set to allow read and write.';
+    else if(msg.includes('404'))msg='Room not found — check the code and try again.';
+    showToast('Could not join: '+msg);
+  }
   finally{hideLoading();}
 }
 
@@ -911,9 +950,41 @@ async function submitVotes(){
 }
 async function doSubmitVotes(){
   showLoading('Saving votes…');
-  try{votes[votingPlayerId]=myVotes;await saveVotes(votingPlayerId,myVotes);showToast('Votes saved!');goToResults();}
+  try{
+    votes[votingPlayerId]=myVotes;
+    await saveVotes(votingPlayerId,myVotes);
+    showToast('Votes saved!');
+    renderVoteWaiting();
+    showScreen('screen-vote-waiting');
+  }
   catch(e){showToast('Could not save votes: '+e.message);}
   finally{hideLoading();}
+}
+
+function renderVoteWaiting(){
+  const total=activePlayers.length;
+  const done=Object.keys(votes).length;
+  document.getElementById('vote-chip').textContent=`${done} / ${total}`;
+  document.getElementById('vote-chip').className=done===total?'badge badge-g':'badge';
+  document.getElementById('vote-bar').style.width=`${total?(done/total)*100:0}%`;
+  const vn=document.getElementById('vote-names');vn.innerHTML='';
+  activePlayers.forEach(p=>{
+    const isDone=!!votes[p.id];
+    const row=document.createElement('div');row.className='sub-row';
+    row.appendChild(mkAv(p,32,`opacity:${isDone?1:.5};`));
+    const lb=document.createElement('span');lb.style.cssText='flex:1;font-size:14px;font-weight:700;';lb.textContent=p.name;row.appendChild(lb);
+    const st=document.createElement('span');st.style.cssText=`font-size:13px;font-weight:700;color:${isDone?'var(--suc)':'var(--tr)'};`;st.textContent=isDone?'Voted ✓':'Not yet…';row.appendChild(st);
+    vn.appendChild(row);
+  });
+  const miss=total-done;
+  const mn=document.getElementById('vote-missing-note');
+  mn.style.display=miss>0?'block':'none';
+  mn.textContent=`${miss} player${miss>1?'s':''} still to vote`;
+  // Auto-advance to results when everyone has voted
+  if(done>=total){
+    showToast('All votes in! 🎉');
+    setTimeout(()=>goToResults(),1200);
+  }
 }
 
 // ── RESULTS ────────────────────────────────────────────────────────────────
