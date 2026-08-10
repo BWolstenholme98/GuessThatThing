@@ -153,7 +153,7 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
 
 <!-- HOME -->
 <div id="screen-home" class="screen active">
-  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><span style="font-size:11px;color:var(--tr);font-weight:700;letter-spacing:.05em;">v1.15</span></div>
+  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><span style="font-size:11px;color:var(--tr);font-weight:700;letter-spacing:.05em;">v1.16</span></div>
   <div class="red-bar"></div>
   <div class="page-c">
     <div style="max-width:480px;width:100%;">
@@ -516,7 +516,15 @@ function stopAll(){stopPolling();}
 function onRemoteUpdate(data){
   if(!data)return;
   const changed=JSON.stringify(data.submissions)!==JSON.stringify(submissions);
-  if(data.question&&data.question!==question){question=data.question;const el=document.getElementById('q-display');if(el)el.textContent=question;}
+  // Question just became available — update and refresh lobby
+  if(data.question&&data.question!==question){
+    question=data.question;
+    const el=document.getElementById('q-display');if(el)el.textContent=question;
+    // If we were on register screen waiting for question, move to lobby now
+    if(!data.questionPending&&document.getElementById('screen-register').classList.contains('active')&&selectedPlayer){
+      renderWaiting();showScreen('screen-waiting');
+    }
+  }
   if(data.submissions){
     // Restore canvas images for any submission that only has svg cover
     const merged={...submissions};
@@ -656,12 +664,21 @@ function renderCreate(){
 }
 function selAll(){selIds=roster.map(m=>m.id);renderCreate();}
 function selNone(){selIds=[];renderCreate();}
-function proceedToQuestion(){
+async function proceedToQuestion(){
   activePlayers=roster.filter(m=>selIds.includes(m.id));
   if(activePlayers.length<2){showToast('Select at least 2 players');return;}
-  // Generate code early so it can be shared before question is picked
-  roomCode=genCode();
-  submissions={};votes={};
+  roomCode=genCode();submissions={};votes={};question='';
+  showLoading('Creating room…');
+  try{
+    // Create game stub on server immediately — joiners can connect before question is picked
+    const p=activePlayers.map(({id,name})=>({id,name}));
+    await dbPut(`games/${roomCode}`,{question:'',activePlayers:p,submissions:{},votes:{},createdAt:Date.now(),questionPending:true});
+    saveGameSnapshot();
+    startSSE(roomCode);
+  }catch(e){
+    showToast('Could not create room: '+e.message);hideLoading();return;
+  }
+  hideLoading();
   showScreen('screen-pick-q');
 }
 
@@ -684,14 +701,13 @@ function shuffleQList(){
 function useCustomQuestion(){const q=document.getElementById('custom-q-input').value.trim();if(!q){showToast('Type a question first');return;}useQuestion(q);}
 
 async function useQuestion(q){
-  question=q;submissions={};votes={};
-  showLoading('Setting up game…');
+  question=q;
+  showLoading('Saving question…');
   try{
-    const p=activePlayers.map(({id,name})=>({id,name}));
-    await dbPut(`games/${roomCode}`,{question,activePlayers:p,submissions:{},votes:{},createdAt:Date.now()});
+    // Game already exists — just update the question and mark ready
+    await dbPatch(`games/${roomCode}`,{question,questionPending:false});
     saveGameSnapshot();
     await loadSharedRoster();
-    startSSE(roomCode);
     renderWaiting();
     showScreen('screen-waiting');
   }catch(e){
@@ -724,6 +740,7 @@ async function joinRoom(codeOverride){
     await loadSharedRoster();
     startSSE(roomCode);
     showRegisterScreen();
+    // If question hasn't been picked yet, onRemoteUpdate will handle the transition
   }catch(e){
     let msg=e.message||'Unknown error';
     if(msg.includes('404'))msg='Room not found — check the code and try again.';
@@ -745,7 +762,13 @@ function showRegisterScreen(){
     const tile=document.createElement('button');tile.className='pt';
     tile.appendChild(mkAv(m,48));
     const lb=document.createElement('span');lb.textContent=m.name;tile.appendChild(lb);
-    tile.onclick=()=>{selectedPlayer=m;showToast('Welcome, '+m.name+'!');renderWaiting();showScreen('screen-waiting');};
+    tile.onclick=()=>{
+      selectedPlayer=m;
+      showToast('Welcome, '+m.name+'!');
+      // If question is pending, stay on register screen with a waiting message
+      if(!question){showToast('Waiting for host to pick a question…');return;}
+      renderWaiting();showScreen('screen-waiting');
+    };
     grid.appendChild(tile);
   });
   showScreen('screen-register');
@@ -759,7 +782,12 @@ async function registerSelf(){
     if(!member){member={id:genId(),name,photo:regPhoto};roster.push(member);saveRoster();await savePersonToSharedRoster(member);}
     else if(regPhoto&&!member.photo){member.photo=regPhoto;saveRoster();}
     await savePlayerToGame(member);
-    selectedPlayer=member;showToast('Welcome, '+member.name+'!');
+    selectedPlayer=member;
+    if(!question){
+      showToast('Waiting for host to pick a question…');
+      hideLoading();return;
+    }
+    showToast('Welcome, '+member.name+'!');
     renderWaiting();showScreen('screen-waiting');
   }catch(e){showToast('Could not join — try again');}
   finally{hideLoading();}
@@ -792,16 +820,45 @@ function renderWaiting(){
     const st=document.createElement('span');st.style.cssText=`font-size:13px;font-weight:700;color:${isDone?'var(--suc)':'var(--tr)'};`;st.textContent=isDone?'Submitted ✓':'Waiting…';row.appendChild(st);
     sn.appendChild(row);
   });
-  // submit picker
+  // submit area — personalised to the current player if known
   const sp=document.getElementById('submit-picker');sp.innerHTML='';
-  activePlayers.forEach(p=>{
-    const isDone=!!submissions[p.id];
-    const btn=document.createElement('button');
-    btn.style.cssText=`display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 10px;background:${isDone?'var(--sucl)':'var(--gxl)'};border:1px solid ${isDone?'var(--suc)':'var(--str)'};cursor:pointer;font-family:Arial,sans-serif;transition:all 120ms;min-width:80px;`;
-    btn.appendChild(mkAv(p,40));
-    const lb=document.createElement('span');lb.style.cssText=`font-size:12px;font-weight:700;color:${isDone?'var(--suc)':'var(--td)'};`;lb.textContent=isDone?'✓ '+p.name:p.name;btn.appendChild(lb);
-    btn.onclick=()=>openSubmit(p);sp.appendChild(btn);
-  });
+  if(selectedPlayer){
+    const isDone=!!submissions[selectedPlayer.id];
+    if(isDone){
+      // Already submitted — show what they said with an edit option
+      const done=document.createElement('div');
+      done.style.cssText='display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--sucl);border:1px solid var(--suc);';
+      done.appendChild(mkAv(selectedPlayer,44));
+      const txt=document.createElement('div');txt.style.flex='1';
+      const nm=document.createElement('div');nm.style.cssText='font-weight:700;font-size:15px;color:var(--td);';nm.textContent=selectedPlayer.name;txt.appendChild(nm);
+      const st=document.createElement('div');st.style.cssText='font-size:13px;color:var(--suc);font-weight:700;margin-top:2px;';st.textContent='✓ Answer submitted';txt.appendChild(st);
+      const ans=document.createElement('div');ans.style.cssText='font-size:13px;color:var(--tr);margin-top:2px;font-style:italic;';
+      ans.textContent='"'+(submissions[selectedPlayer.id]?.answer||'')+'"';txt.appendChild(ans);
+      done.appendChild(txt);
+      const edit=document.createElement('button');edit.className='pill';edit.style.cssText='flex-shrink:0;';edit.textContent='Edit';edit.onclick=()=>openSubmit(selectedPlayer);
+      done.appendChild(edit);
+      sp.appendChild(done);
+    } else {
+      // Not yet submitted — big prominent button
+      const btn=document.createElement('button');
+      btn.className='btn btn-r btn-bl';
+      btn.style.cssText='display:flex;align-items:center;justify-content:center;gap:14px;font-size:16px;min-height:68px;';
+      btn.appendChild(mkAv(selectedPlayer,40,'border:2px solid rgba(255,255,255,.4);'));
+      const lb=document.createElement('span');lb.textContent=selectedPlayer.name+' — tap to submit your answer';btn.appendChild(lb);
+      btn.onclick=()=>openSubmit(selectedPlayer);
+      sp.appendChild(btn);
+    }
+  } else {
+    // No player identified yet — show all tiles so they can pick themselves
+    activePlayers.forEach(p=>{
+      const isDone=!!submissions[p.id];
+      const btn=document.createElement('button');
+      btn.style.cssText=`display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 10px;background:${isDone?'var(--sucl)':'var(--gxl)'};border:1px solid ${isDone?'var(--suc)':'var(--str)'};cursor:pointer;font-family:Arial,sans-serif;transition:all 120ms;min-width:80px;`;
+      btn.appendChild(mkAv(p,40));
+      const lb=document.createElement('span');lb.style.cssText=`font-size:12px;font-weight:700;color:${isDone?'var(--suc)':'var(--td)'};`;lb.textContent=isDone?'✓ '+p.name:p.name;btn.appendChild(lb);
+      btn.onclick=()=>{selectedPlayer=p;renderWaiting();};sp.appendChild(btn);
+    });
+  }
   // guess button
   const gb=document.getElementById('guess-btn');
   gb.disabled=done===0;
