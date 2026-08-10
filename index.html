@@ -127,22 +127,7 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
   </div>
 </div>
 
-<div id="member-ov" class="overlay">
-  <div class="modal">
-    <p class="h4" id="member-title" style="margin-bottom:24px;">Add team member</p>
-    <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:20px;">
-      <div style="position:relative;cursor:pointer;" onclick="document.getElementById('photo-file').click()">
-        <div id="modal-av" style="width:72px;height:72px;"></div>
-        <div style="position:absolute;bottom:0;right:0;width:22px;height:22px;background:var(--red);display:flex;align-items:center;justify-content:center;"><svg width="12" height="12" viewBox="0 0 16 16" fill="white"><path d="M8 4a2 2 0 0 0-2 2v.5H4.5A1.5 1.5 0 0 0 3 8v5a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 15 13V8a1.5 1.5 0 0 0-1.5-1.5H12V6a2 2 0 0 0-2-2H8z"/></svg></div>
-      </div>
-      <input type="file" id="photo-file" accept="image/*" style="display:none" onchange="onPhotoFile(event)">
-      <button onclick="document.getElementById('photo-file').click()" class="pill" id="photo-btn">Upload photo</button>
-      <button id="rm-photo-btn" onclick="removePhoto()" style="display:none;background:none;border:none;color:var(--red);font-size:13px;cursor:pointer;">Remove photo</button>
-    </div>
-    <div style="margin-bottom:20px;"><label class="lbl" for="modal-name">Name</label><input type="text" class="inp" id="modal-name" placeholder="First name" maxlength="30" onkeydown="if(event.key==='Enter')saveMember()"></div>
-    <div style="display:flex;gap:10px;"><button class="btn btn-g btn-bl" onclick="closeMemberModal()">Cancel</button><button class="btn btn-r btn-bl" onclick="saveMember()">Save</button></div>
-  </div>
-</div>
+<!-- member modal removed -->
 
 <!-- FIREBASE SETUP (no longer used — kept as placeholder) -->
 <div id="screen-firebase" class="screen">
@@ -153,35 +138,23 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
 
 <!-- HOME -->
 <div id="screen-home" class="screen active">
-  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><span style="font-size:11px;color:var(--tr);font-weight:700;letter-spacing:.05em;">v1.18</span></div>
+  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><span style="font-size:11px;color:var(--tr);font-weight:700;letter-spacing:.05em;">v1.19</span></div>
   <div class="red-bar"></div>
   <div class="page-c">
     <div style="max-width:480px;width:100%;">
       <div class="eyebrow">Case team fun</div>
       <h1 class="h1 mt2 mb4">Guess That <span class="text-red">Thing</span></h1>
       <p class="body mb5">Everyone answers the same question anonymously. Can your team match the answer to the person?</p>
-      <div id="home-roster-preview" style="display:flex;justify-content:center;min-height:48px;align-items:center;margin-bottom:24px;"></div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
         <button class="btn btn-r btn-bl" onclick="goToCreate()">Host a New Game</button>
         <button class="btn btn-w btn-bl" onclick="showScreen('screen-join')">Join a Game</button>
-        <button class="btn btn-g btn-bl" id="home-team-btn" onclick="showScreen('screen-team')">Set Up Your Team</button>
       </div>
       <div class="tc" id="server-status" style="font-size:13px;color:var(--tr);"></div>
     </div>
   </div>
 </div>
 
-<!-- TEAM -->
-<div id="screen-team" class="screen">
-  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><div class="tr"><button class="pill" onclick="goHome()">⌂ Home</button></div></div>
-  <div class="red-bar"></div>
-  <div class="pw-sm">
-    <div class="eyebrow mt6">Your team</div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;"><h2 class="h3">Team roster</h2><button class="btn btn-r btn-sm" onclick="openMemberModal(null)">+ Add</button></div>
-    <div class="card" style="padding:0;"><div id="roster-list"></div><div id="roster-empty" style="display:none;padding:40px;text-align:center;"><p class="body mb4">No team members yet.</p><button class="btn btn-r" onclick="openMemberModal(null)">Add first person</button></div></div>
-    <div class="mt6"><button class="btn btn-r btn-bl" onclick="goHome()">Done</button></div>
-  </div>
-</div>
+<!-- team screen removed -->
 
 <!-- CREATE — just go straight to question picker, no player selection -->
 
@@ -219,32 +192,22 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
   </div>
 </div>
 
-<!-- REGISTER -->
+<!-- REGISTER — simple name entry, no roster -->
 <div id="screen-register" class="screen">
   <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><div class="tr"><button class="pill" onclick="goHome()">⌂ Home</button></div></div>
   <div class="red-bar"></div>
   <div class="page-c">
-    <div style="max-width:480px;width:100%;">
-      <div class="eyebrow">Who are you?</div>
-      <h2 class="h2 mt2 mb4">Add yourself to the game</h2>
-      <p class="body mb3">Pick your name from the list, or add yourself if you're new.</p>
+    <div style="max-width:400px;width:100%;">
+      <div class="eyebrow">You're in!</div>
+      <h2 class="h2 mt2 mb4">What's your name?</h2>
       <div id="reg-code-banner" style="display:none;margin-bottom:20px;padding:10px 14px;background:var(--gxl);border-left:4px solid var(--red);font-size:13px;color:var(--tr);">
         ⏳ Waiting for the host to pick a question…
       </div>
-      <div id="reg-roster-grid" class="pg mb5"></div>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;"><div style="flex:1;height:1px;background:var(--str);"></div><span class="sm">or add yourself</span><div style="flex:1;height:1px;background:var(--str);"></div></div>
       <div class="card mb4">
-        <div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">
-          <div style="position:relative;cursor:pointer;flex-shrink:0;" onclick="document.getElementById('reg-photo-file').click()">
-            <div id="reg-av" style="width:56px;height:56px;"></div>
-            <div style="position:absolute;bottom:0;right:0;width:18px;height:18px;background:var(--red);display:flex;align-items:center;justify-content:center;"><svg width="10" height="10" viewBox="0 0 16 16" fill="white"><path d="M8 4a2 2 0 0 0-2 2v.5H4.5A1.5 1.5 0 0 0 3 8v5a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 15 13V8a1.5 1.5 0 0 0-1.5-1.5H12V6a2 2 0 0 0-2-2H8z"/></svg></div>
-          </div>
-          <input type="file" id="reg-photo-file" accept="image/*" style="display:none" onchange="onRegPhoto(event)">
-          <div style="flex:1;"><label class="lbl" for="reg-name">Your name</label><input type="text" class="inp" id="reg-name" placeholder="First name" maxlength="30" onkeydown="if(event.key==='Enter')registerSelf()"></div>
-        </div>
+        <label class="lbl" for="reg-name">Your name</label>
+        <input type="text" class="inp" id="reg-name" placeholder="First name" maxlength="30" style="margin-bottom:16px;" onkeydown="if(event.key==='Enter')registerSelf()">
         <button class="btn btn-r btn-bl" onclick="registerSelf()">Join game →</button>
       </div>
-      <div class="tc"><button class="pill" onclick="backToWaiting()">I'm just watching — skip</button></div>
     </div>
   </div>
 </div>
@@ -393,13 +356,11 @@ const GRADS=[['#CC0000','#9D1B22'],['#333333','#121212'],['#990000','#660000'],[
 // ── STATE ──────────────────────────────────────────────────────────────────
 let roster=[],selIds=[],roomCode=null,question='',activePlayers=[],submissions={},cards=[],selectedPlayer=null;
 let sseSource=null,pollTimer=null;
-let editMemberId=null,modalPhoto=null,confirmCb=null,regPhoto=null;
+let confirmCb=null;
 let votes={},myVotes={},votingPlayerId=null,selectedChipId=null;
 
 // ── LOCALSTORAGE ───────────────────────────────────────────────────────────
 function ls(k,v){if(v===undefined){try{const r=localStorage.getItem(k);return r?JSON.parse(r):null;}catch{return null;}}else{try{localStorage.setItem(k,JSON.stringify(v));}catch{}}}
-function loadRoster(){roster=ls('gtt-roster')||[];}
-function saveRoster(){ls('gtt-roster',roster);}
 
 // ── BACKEND ──────────────────────────────────────────────────────────────────
 // Routes to Claude sandbox storage, or the Render server (gtt-proxy).
@@ -572,14 +533,6 @@ async function savePlayerToGame(p){
     await dbPatch(`games/${roomCode}`,{activePlayers:ap});
   }catch(e){console.warn('savePlayerToGame failed',e);}
 }
-async function loadSharedRoster(){
-  if(USE_CLAUDE_STORAGE)return; // local only in sandbox
-  try{const data=await dbGet('roster');if(data){Object.values(data).forEach(rm=>{const l=roster.find(m=>m.id===rm.id);if(!l)roster.push({...rm});else if(rm.photo&&!l.photo)l.photo=rm.photo;});saveRoster();}}catch{}
-}
-async function savePersonToSharedRoster(m){
-  if(USE_CLAUDE_STORAGE)return;
-  try{await dbPatch('roster',{[m.id]:{id:m.id,name:m.name}});}catch{}
-}
 
 // ── FIREBASE SETUP ─────────────────────────────────────────────────────────
 function updateFbBtn(){}
@@ -590,60 +543,16 @@ function showScreen(id){
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
   if(id==='screen-home')renderHome();
-  if(id==='screen-team')renderTeam();
   if(id==='screen-pick-q')renderQPicker();
 }
+function renderHome(){}
+
 function goHome(){showScreen('screen-home');}
 
-// ── HOME ───────────────────────────────────────────────────────────────────
-function renderHome(){
-  updateFbBtn();
-  const prev=document.getElementById('home-roster-preview');prev.innerHTML='';
-  const shown=roster.slice(0,8);
-  shown.forEach((m,i)=>{const av=mkAv(m,40,`margin-left:${i>0?-10:0}px;border:2px solid white;z-index:${shown.length-i};`);prev.appendChild(av);});
-  if(roster.length>8){const more=document.createElement('div');more.className='av-init';more.style.cssText='width:40px;height:40px;background:var(--gm);font-size:12px;color:var(--td);margin-left:-10px;border:2px solid white;';more.textContent=`+${roster.length-8}`;prev.appendChild(more);}
-  document.getElementById('home-team-btn').textContent=roster.length>0?`Manage team (${roster.length})`:'Set up your team';
-}
+// ── HOME ─────────────────────────────────────────────────────────────────────
+
 function goToCreate(){proceedToQuestion();}
 
-// ── TEAM ───────────────────────────────────────────────────────────────────
-function renderTeam(){
-  const list=document.getElementById('roster-list'),empty=document.getElementById('roster-empty');
-  list.innerHTML='';
-  if(roster.length===0){empty.style.display='block';return;}
-  empty.style.display='none';
-  roster.forEach(m=>{
-    const row=document.createElement('div');row.className='rr';
-    row.appendChild(mkAv(m,44));
-    const nm=document.createElement('div');nm.style.cssText='flex:1;font-weight:700;font-size:15px;';nm.textContent=m.name;row.appendChild(nm);
-    const btns=document.createElement('div');btns.style.display='flex';btns.style.gap='8px';
-    const e=document.createElement('button');e.className='pill';e.textContent='Edit';e.onclick=()=>openMemberModal(m);
-    const d=document.createElement('button');d.className='pill';d.style.cssText='color:var(--red);border-color:var(--red);';d.textContent='Remove';d.onclick=()=>{roster=roster.filter(x=>x.id!==m.id);saveRoster();renderTeam();};
-    btns.append(e,d);row.appendChild(btns);list.appendChild(row);
-  });
-}
-
-// ── MEMBER MODAL ───────────────────────────────────────────────────────────
-function openMemberModal(member){
-  editMemberId=member?.id||null;modalPhoto=member?.photo||null;
-  document.getElementById('member-title').textContent=member?'Edit team member':'Add team member';
-  document.getElementById('modal-name').value=member?.name||'';
-  document.getElementById('photo-file').value='';
-  document.getElementById('photo-btn').textContent=modalPhoto?'Change photo':'Upload photo';
-  document.getElementById('rm-photo-btn').style.display=modalPhoto?'block':'none';
-  setAv(document.getElementById('modal-av'),{name:member?.name||'?',photo:modalPhoto},72);
-  document.getElementById('member-ov').classList.add('show');
-  setTimeout(()=>document.getElementById('modal-name').focus(),100);
-}
-function closeMemberModal(){document.getElementById('member-ov').classList.remove('show');}
-async function onPhotoFile(e){const f=e.target.files?.[0];if(!f)return;modalPhoto=await readFile(f);document.getElementById('photo-btn').textContent='Change photo';document.getElementById('rm-photo-btn').style.display='block';setAv(document.getElementById('modal-av'),{name:document.getElementById('modal-name').value||'?',photo:modalPhoto},72);}
-function removePhoto(){modalPhoto=null;document.getElementById('photo-btn').textContent='Upload photo';document.getElementById('rm-photo-btn').style.display='none';setAv(document.getElementById('modal-av'),{name:document.getElementById('modal-name').value||'?',photo:null},72);}
-function saveMember(){
-  const name=document.getElementById('modal-name').value.trim();if(!name){showToast('Enter a name');return;}
-  if(editMemberId){const i=roster.findIndex(m=>m.id===editMemberId);if(i>=0)roster[i]={...roster[i],name,photo:modalPhoto};}
-  else roster.push({id:genId(),name,photo:modalPhoto});
-  saveRoster();closeMemberModal();renderTeam();renderHome();
-}
 
 // ── CREATE (no longer used — going straight to question picker) ──────────────
 function renderCreate(){}
@@ -731,48 +640,30 @@ async function joinRoom(codeOverride){
   finally{hideLoading();}
 }
 
-// ── REGISTER ───────────────────────────────────────────────────────────────
+// ── REGISTER — simple name entry, no roster ────────────────────────────────
 function showRegisterScreen(){
-  regPhoto=null;
   document.getElementById('reg-name').value='';
-  setAv(document.getElementById('reg-av'),{name:'?',photo:null},56);
-  // Show waiting banner if host hasn't picked question yet
   const banner=document.getElementById('reg-code-banner');
   if(banner)banner.style.display=(!question)?'block':'none';
-  const grid=document.getElementById('reg-roster-grid');grid.innerHTML='';
-  const known=new Map();
-  roster.forEach(m=>known.set(m.id,m));
-  activePlayers.forEach(p=>{if(!known.has(p.id))known.set(p.id,p);});
-  Array.from(known.values()).forEach(m=>{
-    const tile=document.createElement('button');tile.className='pt';
-    tile.appendChild(mkAv(m,48));
-    const lb=document.createElement('span');lb.textContent=m.name;tile.appendChild(lb);
-    tile.onclick=()=>{
-      selectedPlayer=m;
-      showToast('Welcome, '+m.name+'!');
-      // If question is pending, stay on register screen with a waiting message
-      if(!question){showToast('Waiting for host to pick a question…');return;}
-      renderWaiting();showScreen('screen-waiting');
-    };
-    grid.appendChild(tile);
-  });
   showScreen('screen-register');
+  setTimeout(()=>document.getElementById('reg-name').focus(),100);
 }
-async function onRegPhoto(e){const f=e.target.files?.[0];if(!f)return;regPhoto=await readFile(f);setAv(document.getElementById('reg-av'),{name:document.getElementById('reg-name').value||'?',photo:regPhoto},56);}
+
 async function registerSelf(){
-  const name=document.getElementById('reg-name').value.trim();if(!name){showToast('Enter your name first');return;}
+  const name=document.getElementById('reg-name').value.trim();
+  if(!name){showToast('Enter your name first');return;}
   showLoading('Joining…');
   try{
-    let member=roster.find(m=>m.name.toLowerCase()===name.toLowerCase());
-    if(!member){member={id:genId(),name,photo:regPhoto};roster.push(member);saveRoster();await savePersonToSharedRoster(member);}
-    else if(regPhoto&&!member.photo){member.photo=regPhoto;saveRoster();}
-    await savePlayerToGame(member);
+    const member={id:genId(),name,photo:null};
     selectedPlayer=member;
+    await savePlayerToGame(member);
     if(!question){
-      showToast('Waiting for host to pick a question…');
-      hideLoading();return;
+      hideLoading();
+      // Stay on register screen, banner shows "waiting for host"
+      showToast('You're in! Waiting for the host to pick a question…');
+      return;
     }
-    showToast('Welcome, '+member.name+'!');
+    showToast('Welcome, '+name+'!');
     renderWaiting();showScreen('screen-waiting');
   }catch(e){showToast('Could not join — try again');}
   finally{hideLoading();}
@@ -924,7 +815,7 @@ function renderCards(){
         <div class="ctxt">
           <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tr);">Card ${i+1}</span>
           <div style="font-size:clamp(13px,1.5vw,15px);font-weight:700;color:var(--td);line-height:1.5;flex:1;display:flex;align-items:center;padding:8px 0;"><span style="border-left:3px solid var(--red);padding-left:10px;">${esc(card.answer)}</span></div>
-          <span style="font-size:11px;color:var(--tr);">Tap to reveal →</span>
+          <span style="font-size:11px;color:var(--tr);">Discuss — then vote to reveal →</span>
         </div>
         <div class="cimg">${cardMediaHTML(card.cover,card.emojiArt,i)}</div>
       </div>
@@ -934,7 +825,7 @@ function renderCards(){
         <span style="font-size:clamp(18px,4vw,24px);font-weight:700;color:var(--black);text-align:center;padding:0 12px;">${esc(card.name)}</span>
       </div>
     </div>`;
-    wrap.onclick=()=>wrap.classList.toggle('flipped');
+    // No tap-to-flip on guessing screen — reveals after voting only
     grid.appendChild(wrap);
     const cavEl=document.getElementById(`cav-${i}`);
     if(cavEl)cavEl.appendChild(mkAv(card.person,56,'border:2px solid var(--red);'));
@@ -1291,7 +1182,6 @@ function routeFromUrl(){
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────
-loadRoster();
 renderHome();
 // Show server status on home screen
 (async()=>{
