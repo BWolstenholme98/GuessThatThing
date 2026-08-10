@@ -427,8 +427,45 @@ async function serverPut(path,data){
 }
 async function serverPatch(path,data){
   const r=await fetch(`${SERVER}/${path}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  // 404 = server restarted and lost game state — rebuild from local snapshot then retry
+  if(r.status===404){
+    console.warn('PATCH 404 — server restarted, rebuilding game from local snapshot');
+    await rebuildGameOnServer();
+    const r2=await fetch(`${SERVER}/${path}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    if(!r2.ok)throw new Error('PATCH '+r2.status+' (after rebuild)');
+    return r2.json();
+  }
   if(!r.ok)throw new Error('PATCH '+r.status);
   return r.json();
+}
+
+// Save a local snapshot of the full game state so we can rebuild after server restart
+function saveGameSnapshot(){
+  if(!roomCode)return;
+  ls('gtt-snapshot',{
+    roomCode, question,
+    activePlayers: activePlayers.map(({id,name})=>({id,name})),
+    submissions, votes,
+    savedAt: Date.now(),
+  });
+}
+
+// Rebuild the game on the server using the local snapshot
+async function rebuildGameOnServer(){
+  const snap=ls('gtt-snapshot');
+  if(!snap||snap.roomCode!==roomCode){
+    // No snapshot — use current in-memory state
+    const p=activePlayers.map(({id,name})=>({id,name}));
+    await serverPut(`games/${roomCode}`,{question,activePlayers:p,submissions,votes,createdAt:Date.now()});
+    return;
+  }
+  await serverPut(`games/${snap.roomCode}`,{
+    question: snap.question,
+    activePlayers: snap.activePlayers,
+    submissions: snap.submissions||{},
+    votes: snap.votes||{},
+    createdAt: Date.now(),
+  });
 }
 
 // ── Unified DB API ────────────────────────────────────────────────────────────
@@ -584,6 +621,7 @@ async function useQuestion(q){
   try{
     const p=activePlayers.map(({id,name})=>({id,name}));
     await dbPut(`games/${roomCode}`,{question,activePlayers:p,submissions:{},votes:{},createdAt:Date.now()});
+    saveGameSnapshot();
     await loadSharedRoster();
     startSSE(roomCode);
     renderWaiting();
@@ -614,6 +652,7 @@ async function joinRoom(codeOverride){
     roomCode=code;question=data.question;
     activePlayers=(data.activePlayers||[]).map(rp=>{const l=roster.find(m=>m.id===rp.id||m.name===rp.name);return l?{...rp,photo:l.photo}:{...rp};});
     submissions=data.submissions||{};votes=data.votes||{};
+    saveGameSnapshot();
     await loadSharedRoster();
     startSSE(roomCode);
     showRegisterScreen();
@@ -743,6 +782,7 @@ async function submitAnswer(){
     const sub={answer:ans,emojiArt:emoji,cover:finalCover};
     submissions[selectedPlayer.id]=sub;
     await saveSubmission(selectedPlayer.id,sub);
+    saveGameSnapshot();
     document.getElementById('submit-form').style.display='none';
     document.getElementById('submit-done').style.display='block';
     setTimeout(()=>{renderWaiting();showScreen('screen-waiting');},1200);
@@ -887,6 +927,7 @@ async function doSubmitVotes(){
   try{
     votes[votingPlayerId]=myVotes;
     await saveVotes(votingPlayerId,myVotes);
+    saveGameSnapshot();
     showToast('Votes saved!');
     renderVoteWaiting();
     showScreen('screen-vote-waiting');
