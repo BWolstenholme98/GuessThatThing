@@ -138,7 +138,7 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
 
 <!-- HOME -->
 <div id="screen-home" class="screen active">
-  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><span style="font-size:11px;color:var(--tr);font-weight:700;letter-spacing:.05em;">v1.19</span></div>
+  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><span style="font-size:11px;color:var(--tr);font-weight:700;letter-spacing:.05em;">v1.20</span></div>
   <div class="red-bar"></div>
   <div class="page-c">
     <div style="max-width:480px;width:100%;">
@@ -561,16 +561,26 @@ function selNone(){}
 async function proceedToQuestion(){
   activePlayers=[];submissions={};votes={};question='';
   roomCode=genCode();
-  showLoading('Creating room…');
-  try{
-    await dbPut(`games/${roomCode}`,{question:'',activePlayers:[],submissions:{},votes:{},createdAt:Date.now(),questionPending:true});
-    saveGameSnapshot();
-    startSSE(roomCode);
-  }catch(e){
-    showToast('Could not create room: '+e.message);hideLoading();return;
-  }
-  hideLoading();
+  // Show question picker immediately — server create happens in background
+  // This avoids blocking on Render free tier wake-up time (~20s)
   showScreen('screen-pick-q');
+  createGameOnServer();
+}
+
+async function createGameOnServer(){
+  for(let attempt=1;attempt<=4;attempt++){
+    try{
+      await dbPut(`games/${roomCode}`,{question:'',activePlayers:[],submissions:{},votes:{},createdAt:Date.now(),questionPending:true});
+      saveGameSnapshot();
+      startSSE(roomCode);
+      console.log('Game created on server ✓');
+      return;
+    }catch(e){
+      console.warn(`Create attempt ${attempt}/4 failed:`,e.message);
+      if(attempt<4){await new Promise(r=>setTimeout(r,3000*attempt));}
+      else{showToast('Server is slow to wake up. Room code is ready — others can join once the server responds.');}
+    }
+  }
 }
 
 // ── QUESTION PICKER ────────────────────────────────────────────────────────
@@ -660,7 +670,7 @@ async function registerSelf(){
     if(!question){
       hideLoading();
       // Stay on register screen, banner shows "waiting for host"
-      showToast('You're in! Waiting for the host to pick a question…');
+      showToast("You're in! Waiting for the host to pick a question…");
       return;
     }
     showToast('Welcome, '+name+'!');
