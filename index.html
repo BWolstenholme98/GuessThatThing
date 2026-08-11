@@ -138,7 +138,7 @@ hr{border:none;border-top:1px solid var(--str);margin:24px 0;}
 
 <!-- HOME -->
 <div id="screen-home" class="screen active">
-  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><span style="font-size:11px;color:var(--tr);font-weight:700;letter-spacing:.05em;">v1.20</span></div>
+  <div class="topbar"><span class="logo" onclick="goHome()">Guess That <span>Thing</span></span><span style="font-size:11px;color:var(--tr);font-weight:700;letter-spacing:.05em;">v1.21</span></div>
   <div class="red-bar"></div>
   <div class="page-c">
     <div style="max-width:480px;width:100%;">
@@ -536,6 +536,7 @@ async function savePlayerToGame(p){
 
 // ── FIREBASE SETUP ─────────────────────────────────────────────────────────
 function updateFbBtn(){}
+function loadSharedRoster(){return Promise.resolve();}  // roster removed
 
 // ── SCREENS ────────────────────────────────────────────────────────────────
 function showScreen(id){
@@ -608,7 +609,6 @@ async function useQuestion(q){
     // Game already exists — just update the question and mark ready
     await dbPatch(`games/${roomCode}`,{question,questionPending:false});
     saveGameSnapshot();
-    await loadSharedRoster();
     renderWaiting();
     showScreen('screen-waiting');
   }catch(e){
@@ -638,7 +638,6 @@ async function joinRoom(codeOverride){
     activePlayers=(data.activePlayers||[]).map(rp=>{const l=roster.find(m=>m.id===rp.id||m.name===rp.name);return l?{...rp,photo:l.photo}:{...rp};});
     submissions=data.submissions||{};votes=data.votes||{};
     saveGameSnapshot();
-    await loadSharedRoster();
     startSSE(roomCode);
     showRegisterScreen();
     // If question hasn't been picked yet, onRemoteUpdate will handle the transition
